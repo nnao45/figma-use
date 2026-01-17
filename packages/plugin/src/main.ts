@@ -2,6 +2,16 @@ console.log('[Figma Bridge] Plugin main loaded at', new Date().toISOString())
 
 figma.showUI(__html__, { width: 300, height: 200 })
 
+// Font cache to avoid repeated loadFontAsync calls
+const loadedFonts = new Set<string>()
+
+async function loadFont(family: string, style: string): Promise<void> {
+  const key = `${family}:${style}`
+  if (loadedFonts.has(key)) return
+  await figma.loadFontAsync({ family, style })
+  loadedFonts.add(key)
+}
+
 figma.ui.onmessage = async (msg: { type: string; id: string; command: string; args?: unknown }) => {
   if (msg.type !== 'command') return
 
@@ -376,7 +386,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       const textNode = figma.createText()
       const family = fontFamily || 'Inter'
       const style = fontStyle || 'Regular'
-      await figma.loadFontAsync({ family, style })
+      await loadFont(family, style)
       textNode.x = x
       textNode.y = y
       textNode.fontName = { family, style }
@@ -434,7 +444,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       }
       const style = figma.createTextStyle()
       style.name = name
-      await figma.loadFontAsync({ family: fontFamily || 'Inter', style: fontStyle || 'Regular' })
+      await loadFont(fontFamily || 'Inter', fontStyle || 'Regular')
       style.fontName = { family: fontFamily || 'Inter', style: fontStyle || 'Regular' }
       if (fontSize) style.fontSize = fontSize
       return { id: style.id, name: style.name, key: style.key }
@@ -599,7 +609,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       const node = await figma.getNodeByIdAsync(id) as TextNode | null
       if (!node || node.type !== 'TEXT') throw new Error('Text node not found')
       const fontName = node.fontName as FontName
-      await figma.loadFontAsync(fontName)
+      await loadFont(fontName.family, fontName.style)
       node.characters = text
       return serializeNode(node)
     }
@@ -625,7 +635,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       const currentFont = node.fontName as FontName
       const family = fontFamily || currentFont.family
       const style = fontStyle || currentFont.style
-      await figma.loadFontAsync({ family, style })
+      await loadFont(family, style)
       node.fontName = { family, style }
       if (fontSize !== undefined) node.fontSize = fontSize
       return serializeNode(node)
@@ -764,7 +774,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       if (!node || node.type !== 'TEXT') throw new Error('Text node not found')
       
       const fontName = node.fontName as FontName
-      await figma.loadFontAsync(fontName)
+      await loadFont(fontName.family, fontName.style)
       
       if (lineHeight !== undefined) {
         node.lineHeight = lineHeight === 'auto' 
