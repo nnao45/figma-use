@@ -22,7 +22,7 @@ export default defineCommand({
     description: 'Render React component to Figma via WebSocket',
   },
   args: {
-    file: { type: 'string', description: 'TSX/JSX file path' },
+    file: { type: 'positional', description: 'TSX/JSX file path', required: false },
     stdin: { type: 'boolean', description: 'Read TSX from stdin' },
     props: { type: 'string', description: 'JSON props to pass to component' },
     parent: { type: 'string', description: 'Parent node ID (sessionID:localID)' },

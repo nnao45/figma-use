@@ -255,16 +255,16 @@ Render TSX/JSX components directly to Figma via WebSocket (bypasses plugin API f
 figma-use render ./Card.figma.tsx
 
 # With props
-figma-use render --file ./Card.figma.tsx --props '{"title": "Hello", "items": ["A", "B"]}'
+figma-use render ./Card.figma.tsx --props '{"title": "Hello", "items": ["A", "B"]}'
 
 # From stdin (useful for AI-generated components)
 cat component.tsx | figma-use render --stdin
 
 # Into specific parent
-figma-use render --file ./Card.figma.tsx --parent "1:23"
+figma-use render ./Card.figma.tsx --parent "1:23"
 
 # Dry run (output NodeChanges JSON without sending)
-figma-use render --file ./Card.figma.tsx --dryRun
+figma-use render ./Card.figma.tsx --dryRun
 ```
 
 **Important:** The `render` command requires Figma to be started with remote debugging enabled:
