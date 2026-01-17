@@ -1,4 +1,4 @@
-import type { FigmaNode } from './types.ts'
+import type { FigmaNode, FigmaPage, DeletedResult, ExportResult, StatusResult } from './types.ts'
 import { TYPE_LABELS, formatFill, formatStroke, formatBox, formatType, ok, fail } from './format.ts'
 
 function formatNode(node: Record<string, unknown>, indent = ''): string {
@@ -130,19 +130,19 @@ function formatCreated(node: Record<string, unknown>, action = 'Created'): strin
   return lines.join('\n')
 }
 
-function formatExport(result: { path?: string }): string {
-  return result.path ? ok(`Exported to ${result.path}`) : ok('Exported')
+function formatExport(result: ExportResult): string {
+  return result.filename ? ok(`Exported to ${result.filename}`) : ok('Exported')
 }
 
-function formatDeleted(result: { deleted?: boolean }): string {
+function formatDeleted(result: DeletedResult): string {
   return result.deleted ? ok('Deleted') : fail('Delete failed')
 }
 
-function formatPages(pages: Array<{ id: string; name: string }>): string {
+function formatPages(pages: FigmaPage[]): string {
   return pages.map((p, i) => `[${i}] "${p.name}" (${p.id})`).join('\n')
 }
 
-function formatStatus(status: { pluginConnected: boolean }): string {
+function formatStatus(status: StatusResult): string {
   return status.pluginConnected ? ok('Plugin connected') : fail('Plugin not connected')
 }
 
@@ -161,7 +161,7 @@ export function formatResult(result: unknown, context?: string): string {
       if (result[0]?.type) {
         return formatNodeList(result as Array<Record<string, unknown>>)
       }
-      return formatPages(result as Array<{ id: string; name: string }>)
+      return formatPages(result as FigmaPage[])
     }
     return JSON.stringify(result, null, 2)
   }
@@ -169,16 +169,16 @@ export function formatResult(result: unknown, context?: string): string {
   if (typeof result === 'object') {
     const obj = result as Record<string, unknown>
 
-    if (obj.deleted !== undefined) {
-      return formatDeleted(obj as { deleted?: boolean })
+    if ('deleted' in obj && obj.deleted !== undefined) {
+      return formatDeleted({ deleted: Boolean(obj.deleted) })
     }
 
-    if (context === 'export' || obj.path) {
-      return formatExport(obj as { path?: string })
+    if (context === 'export' || 'data' in obj) {
+      return formatExport({ data: String(obj.data ?? ''), filename: obj.filename as string | undefined })
     }
 
-    if (obj.pluginConnected !== undefined) {
-      return formatStatus(obj as { pluginConnected: boolean })
+    if ('pluginConnected' in obj) {
+      return formatStatus({ pluginConnected: Boolean(obj.pluginConnected) })
     }
 
     if (obj.id && obj.type) {

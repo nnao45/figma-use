@@ -28,7 +28,7 @@ interface Instance {
   textContent?: string
 }
 
-type Container = {
+interface Container {
   options: RenderOptions
   localIDCounter: number
   children: Instance[]
@@ -124,16 +124,17 @@ function styleToNodeChange(
   if (style.gap !== undefined) {
     nodeChange.stackSpacing = Number(style.gap)
   }
-  if (style.padding !== undefined) {
-    const p = Number(style.padding)
-    nodeChange.stackPadding = p
-    nodeChange.stackPaddingRight = p
-    nodeChange.stackPaddingBottom = p
-  }
-  if (style.paddingTop !== undefined) nodeChange.stackPadding = Number(style.paddingTop)
-  if (style.paddingRight !== undefined) nodeChange.stackPaddingRight = Number(style.paddingRight)
-  if (style.paddingBottom !== undefined) nodeChange.stackPaddingBottom = Number(style.paddingBottom)
-  if (style.paddingLeft !== undefined) nodeChange.stackPadding = Number(style.paddingLeft)
+  
+  // Padding
+  const pt = style.paddingTop ?? style.padding
+  const pr = style.paddingRight ?? style.padding
+  const pb = style.paddingBottom ?? style.padding
+  const pl = style.paddingLeft ?? style.padding
+  
+  if (pt !== undefined) (nodeChange as unknown as Record<string, unknown>).stackVerticalPadding = Number(pt)
+  if (pl !== undefined) (nodeChange as unknown as Record<string, unknown>).stackHorizontalPadding = Number(pl)
+  if (pr !== undefined) nodeChange.stackPaddingRight = Number(pr)
+  if (pb !== undefined) nodeChange.stackPaddingBottom = Number(pb)
   
   // Alignment
   if (style.justifyContent) {
@@ -151,12 +152,15 @@ function styleToNodeChange(
   
   // Text-specific
   if (type.toLowerCase() === 'text' && textContent) {
-    ;(nodeChange as any).characters = textContent
-    if (style.fontSize) (nodeChange as any).fontSize = Number(style.fontSize)
+    // Text content via textData.characters
+    const nc = nodeChange as unknown as Record<string, unknown>
+    nc.textData = { characters: textContent }
+    
+    if (style.fontSize) nc.fontSize = Number(style.fontSize)
     if (style.fontFamily || style.fontWeight) {
       const family = (style.fontFamily as string) || 'Inter'
       const fontStyle = mapFontWeight(style.fontWeight as string)
-      ;(nodeChange as any).fontName = {
+      nc.fontName = {
         family,
         style: fontStyle,
         postscript: `${family}-${fontStyle}`.replace(/\s+/g, ''),
@@ -164,7 +168,7 @@ function styleToNodeChange(
     }
     if (style.textAlign) {
       const map: Record<string, string> = { 'left': 'LEFT', 'center': 'CENTER', 'right': 'RIGHT' }
-      ;(nodeChange as any).textAlignHorizontal = map[style.textAlign as string] || 'LEFT'
+      nc.textAlignHorizontal = map[style.textAlign as string] || 'LEFT'
     }
     if (style.color) {
       const color = parseColor(style.color as string)
@@ -241,25 +245,47 @@ function collectNodeChanges(
   })
 }
 
-const createHostConfig = (container: Container): Reconciler.HostConfig<
-  string, Record<string, unknown>, Container, Instance, Instance,
-  unknown, unknown, Instance, {}, true, unknown, unknown, unknown
-> => ({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const hostConfig: any = {
   supportsMutation: true,
   supportsPersistence: false,
   supportsHydration: false,
-
-  createInstance(type, props): Instance {
-    const { children, ...rest } = props
+  isPrimaryRenderer: true,
+  
+  now: Date.now,
+  scheduleTimeout: setTimeout,
+  cancelTimeout: clearTimeout,
+  noTimeout: -1 as const,
+  
+  getRootHostContext() {
+    return {}
+  },
+  
+  getChildHostContext() {
+    return {}
+  },
+  
+  shouldSetTextContent() {
+    return false
+  },
+  
+  createInstance(
+    type: string,
+    props: Record<string, unknown>,
+    _rootContainer: Container,
+  ): Instance {
+    const { children: _, ...rest } = props
     return {
       type,
       props: rest,
-      localID: container.localIDCounter++,
+      localID: _rootContainer.localIDCounter++,
       children: [],
     }
   },
-
-  createTextInstance(text): Instance {
+  
+  createTextInstance(
+    text: string,
+  ): Instance {
     return {
       type: '__text__',
       props: {},
@@ -268,40 +294,40 @@ const createHostConfig = (container: Container): Reconciler.HostConfig<
       textContent: text,
     }
   },
-
-  appendInitialChild(parent, child) {
+  
+  appendInitialChild(parent: Instance, child: Instance): void {
     if (child.type === '__text__') {
-      parent.textContent = (parent.textContent || '') + child.textContent
+      parent.textContent = (parent.textContent || '') + (child.textContent || '')
     } else {
       parent.children.push(child)
     }
   },
-
-  appendChild(parent, child) {
+  
+  appendChild(parent: Instance, child: Instance): void {
     if (child.type === '__text__') {
-      parent.textContent = (parent.textContent || '') + child.textContent
+      parent.textContent = (parent.textContent || '') + (child.textContent || '')
     } else {
       parent.children.push(child)
     }
   },
-
-  appendChildToContainer(cont, child) {
+  
+  appendChildToContainer(container: Container, child: Instance): void {
     if (child.type !== '__text__') {
-      cont.children.push(child)
+      container.children.push(child)
     }
   },
-
-  removeChild(parent, child) {
+  
+  removeChild(parent: Instance, child: Instance): void {
     const index = parent.children.indexOf(child)
     if (index !== -1) parent.children.splice(index, 1)
   },
-
-  removeChildFromContainer(cont, child) {
-    const index = cont.children.indexOf(child)
-    if (index !== -1) cont.children.splice(index, 1)
+  
+  removeChildFromContainer(container: Container, child: Instance): void {
+    const index = container.children.indexOf(child)
+    if (index !== -1) container.children.splice(index, 1)
   },
-
-  insertBefore(parent, child, beforeChild) {
+  
+  insertBefore(parent: Instance, child: Instance, beforeChild: Instance): void {
     if (child.type === '__text__') return
     const index = parent.children.indexOf(beforeChild)
     if (index !== -1) {
@@ -310,50 +336,80 @@ const createHostConfig = (container: Container): Reconciler.HostConfig<
       parent.children.push(child)
     }
   },
-
-  insertInContainerBefore(cont, child, beforeChild) {
+  
+  insertInContainerBefore(container: Container, child: Instance, beforeChild: Instance): void {
     if (child.type === '__text__') return
-    const index = cont.children.indexOf(beforeChild)
+    const index = container.children.indexOf(beforeChild)
     if (index !== -1) {
-      cont.children.splice(index, 0, child)
+      container.children.splice(index, 0, child)
     } else {
-      cont.children.push(child)
+      container.children.push(child)
     }
   },
-
-  prepareForCommit: () => null,
-  resetAfterCommit: () => {},
-  clearContainer: (cont) => { cont.children = [] },
   
-  getRootHostContext: () => ({}),
-  getChildHostContext: () => ({}),
-  shouldSetTextContent: () => false,
-  finalizeInitialChildren: () => false,
-  prepareUpdate: () => true,
+  prepareForCommit(): Record<string, unknown> | null {
+    return null
+  },
   
-  commitUpdate(instance, _payload, _type, _oldProps, newProps) {
-    const { children, ...rest } = newProps
+  resetAfterCommit(): void {},
+  
+  clearContainer(container: Container): void {
+    container.children = []
+  },
+  
+  finalizeInitialChildren() {
+    return false
+  },
+  
+  prepareUpdate() {
+    return true
+  },
+  
+  commitUpdate(
+    instance: Instance,
+    _updatePayload: unknown,
+    _type: string,
+    _prevProps: Record<string, unknown>,
+    nextProps: Record<string, unknown>
+  ): void {
+    const { children: _, ...rest } = nextProps
     instance.props = rest
   },
   
-  commitTextUpdate(textInstance, _oldText, newText) {
+  commitTextUpdate(
+    textInstance: Instance,
+    _oldText: string,
+    newText: string
+  ): void {
     textInstance.textContent = newText
   },
-
-  getPublicInstance: (instance) => instance,
-  preparePortalMount: () => {},
-  scheduleTimeout: setTimeout,
-  cancelTimeout: clearTimeout,
-  noTimeout: -1,
-  isPrimaryRenderer: true,
-  getCurrentEventPriority: () => 16,
-  getInstanceFromNode: () => null,
-  beforeActiveInstanceBlur: () => {},
-  afterActiveInstanceBlur: () => {},
-  prepareScopeUpdate: () => {},
-  getInstanceFromScope: () => null,
-  detachDeletedInstance: () => {},
-})
+  
+  getPublicInstance(instance: Instance): Instance {
+    return instance
+  },
+  
+  preparePortalMount() {},
+  
+  getCurrentEventPriority() {
+    return 16 // DefaultEventPriority
+  },
+  
+  getInstanceFromNode() {
+    return null
+  },
+  
+  beforeActiveInstanceBlur() {},
+  
+  afterActiveInstanceBlur() {},
+  
+  prepareScopeUpdate() {},
+  
+  getInstanceFromScope() {
+    return null
+  },
+  
+  detachDeletedInstance() {},
+}
 
 /**
  * Render a React element directly to NodeChanges
@@ -368,11 +424,20 @@ export function renderToNodeChanges(
     children: [],
   }
   
-  const hostConfig = createHostConfig(container)
   const reconciler = Reconciler(hostConfig)
   
   const root = reconciler.createContainer(
-    container, 0, null, false, null, '', () => {}, null
+    container,
+    0,          // tag: LegacyRoot
+    null,       // hydrationCallbacks
+    false,      // isStrictMode
+    null,       // concurrentUpdatesByDefaultOverride
+    '',         // identifierPrefix
+    () => {},   // onUncaughtError
+    () => {},   // onCaughtError
+    () => {},   // onRecoverableError
+    () => {},   // onDefaultTransitionIndicator
+    null        // transitionCallbacks
   )
   
   reconciler.updateContainer(element, root, null, () => {})

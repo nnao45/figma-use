@@ -16,8 +16,10 @@ export default defineCommand({
       
       const properties: Record<string, string | boolean> = {}
       for (const p of propStrings) {
-        const [name, ...valueParts] = p.split('=')
-        const value = valueParts.join('=')
+        const parts = p.split('=')
+        const name = parts[0]
+        if (!name) continue
+        const value = parts.slice(1).join('=')
         if (value === 'true') properties[name] = true
         else if (value === 'false') properties[name] = false
         else properties[name] = value

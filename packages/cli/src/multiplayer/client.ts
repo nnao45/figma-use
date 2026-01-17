@@ -7,6 +7,7 @@
  * Performance: ~1000 nodes in 15-20ms (vs 50-100s via plugin API)
  */
 
+import type { ChromeDevToolsTarget } from '../types.ts'
 import { 
   buildMultiplayerUrl, 
   MESSAGE_TYPES,
@@ -94,11 +95,11 @@ export class FigmaMultiplayerClient {
       this.ws.onmessage = (event) => {
         if (!(event.data instanceof ArrayBuffer)) return
         
-        let data = new Uint8Array(event.data)
+        let data: Uint8Array = new Uint8Array(event.data as ArrayBuffer)
         
         // Skip fig-wire header if present
         if (hasFigWireHeader(data)) {
-          data = skipFigWireHeader(data)
+          data = new Uint8Array(skipFigWireHeader(data))
         }
         
         if (!isZstdCompressed(data)) return
@@ -128,7 +129,7 @@ export class FigmaMultiplayerClient {
           if (msgType === MESSAGE_TYPES.SIGNAL) {
             const str = new TextDecoder().decode(decompressed)
             const match = str.match(/reconnect-sequence-number[^\d]*(\d+)/)
-            if (match) {
+            if (match?.[1]) {
               reconnectSequenceNumber = parseInt(match[1])
             }
           }
@@ -216,8 +217,8 @@ export class FigmaMultiplayerClient {
       const handler = (event: MessageEvent) => {
         if (!(event.data instanceof ArrayBuffer)) return
         
-        let data = new Uint8Array(event.data)
-        if (hasFigWireHeader(data)) data = skipFigWireHeader(data)
+        let data: Uint8Array = new Uint8Array(event.data as ArrayBuffer)
+        if (hasFigWireHeader(data)) data = new Uint8Array(skipFigWireHeader(data))
         if (!isZstdCompressed(data)) return
         
         try {
@@ -284,12 +285,12 @@ export async function getCookiesFromDevTools(pageId?: string): Promise<string> {
   // Get list of pages if no ID provided
   if (!pageId) {
     const listResponse = await fetch('http://localhost:9222/json')
-    const pages = await listResponse.json() as Array<{ id: string; url: string }>
-    const figmaPage = pages.find(p => p.url.includes('figma.com'))
-    if (!figmaPage) {
+    const targets = await listResponse.json() as ChromeDevToolsTarget[]
+    const figmaTarget = targets.find(t => t.url.includes('figma.com'))
+    if (!figmaTarget) {
       throw new Error('No Figma tab found. Open Figma in Chrome with --remote-debugging-port=9222')
     }
-    pageId = figmaPage.id
+    pageId = figmaTarget.id
   }
   
   const wsUrl = `ws://localhost:9222/devtools/page/${pageId}`
@@ -337,7 +338,7 @@ export function parseFileKey(urlOrKey: string): string {
     return urlOrKey
   }
   const match = urlOrKey.match(/figma\.com\/(?:file|design)\/([a-zA-Z0-9]+)/)
-  if (!match) {
+  if (!match?.[1]) {
     throw new Error('Invalid Figma URL')
   }
   return match[1]

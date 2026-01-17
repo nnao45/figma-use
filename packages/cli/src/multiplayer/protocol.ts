@@ -157,7 +157,9 @@ export function parseVarint(data: Uint8Array, pos: number): [number, number] {
   let shift = 0
   
   while (pos < data.length) {
-    const byte = data[pos++]
+    const byte = data[pos]
+    if (byte === undefined) break
+    pos++
     value |= (byte & KIWI.VARINT_VALUE_MASK) << shift
     
     if (!(byte & KIWI.VARINT_CONTINUE_BIT)) {
@@ -181,7 +183,7 @@ export function isKiwiMessage(data: Uint8Array): boolean {
  */
 export function getKiwiMessageType(data: Uint8Array): number | null {
   if (!isKiwiMessage(data)) return null
-  return data[1]
+  return data[1] ?? null
 }
 
 /**

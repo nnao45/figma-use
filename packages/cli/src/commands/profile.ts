@@ -2,6 +2,7 @@ import { defineCommand } from 'citty'
 import { ok, fail } from '../format.ts'
 import { spawn } from 'child_process'
 import { resolve } from 'path'
+import type { ChromeDevToolsTarget } from '../types.ts'
 
 export default defineCommand({
   meta: { description: 'Profile any figma-use command via Chrome DevTools Protocol' },
@@ -15,14 +16,16 @@ export default defineCommand({
     const topN = Number(args.top)
 
     // Find Figma tab
-    const targets = await fetch(`http://localhost:${port}/json`).then(r => r.json()).catch(() => null)
+    const targets = await fetch(`http://localhost:${port}/json`)
+      .then(r => r.json() as Promise<ChromeDevToolsTarget[]>)
+      .catch(() => null)
     if (!targets) {
       console.error(fail(`Cannot connect to DevTools on port ${port}`))
       console.error(`Start Figma with: /Applications/Figma.app/Contents/MacOS/Figma --remote-debugging-port=${port}`)
       process.exit(1)
     }
 
-    const figmaTab = targets.find((t: any) => t.title?.includes('Figma') && t.type === 'page' && t.url?.includes('figma.com/design'))
+    const figmaTab = targets.find((t) => t.title?.includes('Figma') && t.type === 'page' && t.url?.includes('figma.com/design'))
     if (!figmaTab) {
       console.error(fail('No Figma design tab found. Open a Figma file first.'))
       process.exit(1)
@@ -32,6 +35,10 @@ export default defineCommand({
     console.log(`Target: ${figmaTab.title}\n`)
 
     // Connect via WebSocket
+    if (!figmaTab.webSocketDebuggerUrl) {
+      console.error(fail('No WebSocket debugger URL found'))
+      process.exit(1)
+    }
     const ws = new WebSocket(figmaTab.webSocketDebuggerUrl)
     let msgId = 1
     const pending = new Map<number, (data: any) => void>()

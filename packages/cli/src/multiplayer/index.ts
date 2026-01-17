@@ -41,8 +41,7 @@ export {
   type GUID,
   type Color,
   type Paint,
-  type Transform,
-  type Size,
+
   type ParentIndex,
   type NodeChange,
   type FigmaMessage,

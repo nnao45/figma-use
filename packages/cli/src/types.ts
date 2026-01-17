@@ -34,3 +34,34 @@ export interface FigmaViewport {
   zoom: number
   bounds: { x: number; y: number; width: number; height: number }
 }
+
+export interface FigmaPage {
+  id: string
+  name: string
+}
+
+export interface ChromeDevToolsTarget {
+  id: string
+  title: string
+  type: string
+  url: string
+  webSocketDebuggerUrl?: string
+}
+
+export interface ExportResult {
+  data: string
+  filename?: string
+}
+
+export interface CommandResult {
+  result?: unknown
+  error?: string
+}
+
+export interface DeletedResult {
+  deleted: boolean
+}
+
+export interface StatusResult {
+  pluginConnected: boolean
+}
