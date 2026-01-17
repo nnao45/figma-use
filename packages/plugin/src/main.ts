@@ -12,6 +12,114 @@ async function loadFont(family: string, style: string): Promise<void> {
   loadedFonts.add(key)
 }
 
+// Fast node creation for batch operations - skips full serialization
+async function createNodeFast(
+  command: string, 
+  args: Record<string, unknown> | undefined,
+  nodeCache?: Map<string, SceneNode>
+): Promise<SceneNode | null> {
+  if (!args) return null
+  
+  const { x = 0, y = 0, width, height, name, parentId, fill, stroke, strokeWeight, radius, opacity,
+          layoutMode, itemSpacing, padding, text, fontSize, fontFamily, fontStyle } = args as {
+    x?: number; y?: number; width?: number; height?: number; name?: string; parentId?: string
+    fill?: string; stroke?: string; strokeWeight?: number; radius?: number; opacity?: number
+    layoutMode?: string; itemSpacing?: number; padding?: { top: number; right: number; bottom: number; left: number }
+    text?: string; fontSize?: number; fontFamily?: string; fontStyle?: string
+  }
+  
+  let node: SceneNode | null = null
+  
+  switch (command) {
+    case 'create-frame': {
+      const frame = figma.createFrame()
+      frame.x = x
+      frame.y = y
+      frame.resize(width || 100, height || 100)
+      if (name) frame.name = name
+      if (fill) frame.fills = [{ type: 'SOLID', color: hexToRgb(fill) }]
+      if (stroke) frame.strokes = [{ type: 'SOLID', color: hexToRgb(stroke) }]
+      if (strokeWeight) frame.strokeWeight = strokeWeight
+      if (typeof radius === 'number') frame.cornerRadius = radius
+      if (typeof opacity === 'number') frame.opacity = opacity
+      if (layoutMode && layoutMode !== 'NONE') {
+        frame.layoutMode = layoutMode as 'HORIZONTAL' | 'VERTICAL'
+        frame.primaryAxisSizingMode = 'AUTO'
+        frame.counterAxisSizingMode = 'AUTO'
+        if (itemSpacing) frame.itemSpacing = itemSpacing
+        if (padding) {
+          frame.paddingTop = padding.top
+          frame.paddingRight = padding.right
+          frame.paddingBottom = padding.bottom
+          frame.paddingLeft = padding.left
+        }
+      }
+      node = frame
+      break
+    }
+    case 'create-rectangle': {
+      const rect = figma.createRectangle()
+      rect.x = x
+      rect.y = y
+      rect.resize(width || 100, height || 100)
+      if (name) rect.name = name
+      if (fill) rect.fills = [{ type: 'SOLID', color: hexToRgb(fill) }]
+      if (stroke) rect.strokes = [{ type: 'SOLID', color: hexToRgb(stroke) }]
+      if (strokeWeight) rect.strokeWeight = strokeWeight
+      if (typeof radius === 'number') rect.cornerRadius = radius
+      if (typeof opacity === 'number') rect.opacity = opacity
+      node = rect
+      break
+    }
+    case 'create-ellipse': {
+      const ellipse = figma.createEllipse()
+      ellipse.x = x
+      ellipse.y = y
+      ellipse.resize(width || 100, height || 100)
+      if (name) ellipse.name = name
+      if (fill) ellipse.fills = [{ type: 'SOLID', color: hexToRgb(fill) }]
+      if (stroke) ellipse.strokes = [{ type: 'SOLID', color: hexToRgb(stroke) }]
+      if (strokeWeight) ellipse.strokeWeight = strokeWeight
+      if (typeof opacity === 'number') ellipse.opacity = opacity
+      node = ellipse
+      break
+    }
+    case 'create-text': {
+      const textNode = figma.createText()
+      const family = fontFamily || 'Inter'
+      const style = fontStyle || 'Regular'
+      await loadFont(family, style)
+      textNode.fontName = { family, style }
+      textNode.characters = text || ''
+      textNode.x = x
+      textNode.y = y
+      if (name) textNode.name = name
+      if (fontSize) textNode.fontSize = fontSize
+      if (fill) textNode.fills = [{ type: 'SOLID', color: hexToRgb(fill) }]
+      if (typeof opacity === 'number') textNode.opacity = opacity
+      node = textNode
+      break
+    }
+    default:
+      return null
+  }
+  
+  if (node && parentId) {
+    // Try cache first, then async lookup
+    let parent = nodeCache?.get(parentId) as FrameNode | GroupNode | null
+    if (!parent) {
+      parent = await figma.getNodeByIdAsync(parentId) as FrameNode | GroupNode | null
+    }
+    if (parent && 'appendChild' in parent) {
+      parent.appendChild(node)
+    }
+  } else if (node) {
+    figma.currentPage.appendChild(node)
+  }
+  
+  return node
+}
+
 // Commands that need access to nodes on other pages
 const NEEDS_ALL_PAGES = new Set([
   'get-node-info', 'get-node-tree', 'get-node-children',
@@ -48,6 +156,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       }
       const results: Array<{ id: string; name: string }> = []
       const refMap = new Map<string, string>() // ref -> actual node id
+      const nodeCache = new Map<string, SceneNode>() // cache created nodes for parent lookups
       
       for (const cmd of commands) {
         // Resolve parent reference if needed
@@ -56,12 +165,21 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
           delete cmd.args.parentRef
         }
         
-        const result = await handleCommand(cmd.command, cmd.args) as { id: string; name: string }
-        results.push(result)
-        
-        // Store ref for children to use
-        if (cmd.args?.ref) {
-          refMap.set(cmd.args.ref as string, result.id)
+        // Use fast path for create commands
+        const node = await createNodeFast(cmd.command, cmd.args, nodeCache)
+        if (node) {
+          results.push({ id: node.id, name: node.name })
+          nodeCache.set(node.id, node) // cache for child lookups
+          if (cmd.args?.ref) {
+            refMap.set(cmd.args.ref as string, node.id)
+          }
+        } else {
+          // Fallback to full handler
+          const result = await handleCommand(cmd.command, cmd.args) as { id: string; name: string }
+          results.push(result)
+          if (cmd.args?.ref) {
+            refMap.set(cmd.args.ref as string, result.id)
+          }
         }
       }
       
