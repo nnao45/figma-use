@@ -133,6 +133,13 @@ new Elysia()
       return { error: 'nodeChanges array is required' }
     }
     
+    // Basic validation - each node must have guid
+    for (const nc of nodeChanges) {
+      if (!nc.guid?.sessionID || !nc.guid?.localID) {
+        return { error: 'Each nodeChange must have guid.sessionID and guid.localID' }
+      }
+    }
+    
     try {
       const { client, sessionID } = await getMultiplayerConnection(fileKey)
       

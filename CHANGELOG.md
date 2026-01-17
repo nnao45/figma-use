@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-01-17
+
+### Added
+
+- **`render` command** — render React/TSX components directly to Figma
+  - From file: `figma-use render ./Card.figma.tsx`
+  - From stdin: `echo '<Frame style={{...}} />' | figma-use render --stdin`
+  - With props: `--props '{"title": "Hello"}'`
+  - Into parent: `--parent "1:23"`
+  - Dry run: `--dryRun` outputs NodeChanges JSON
+- **Multiplayer WebSocket connection pooling** in proxy
+  - First render: ~4s (establishes connection)
+  - Subsequent renders: ~0.4s (10x faster!)
+  - Connections auto-close after 5min idle
+- **React components** — `Frame`, `Text`, `Rectangle`, `Ellipse`, `Line`, `Star`, `Polygon`, `Vector`, `Component`, `Instance`, `Group`, `Page`, `View`
+- **JSX intrinsic elements** — PascalCase in JSX, lowercase in output
+- **culori integration** — robust color parsing (hex, rgb(), hsl(), named colors)
+- `/render` endpoint in proxy for direct NodeChanges submission
+- `/status` endpoint now shows multiplayer connection pool
+
+### Changed
+
+- Proxy now holds persistent WebSocket connections to Figma multiplayer
+- Architecture diagram updated to show dual communication paths
+- 143 tests passing
+
+### Fixed
+
+- TypeScript strict mode errors in tests
+- NodeChanges validation before sending (must have guid)
+
 ## [0.2.1] - 2025-01-17
 
 ### Added
@@ -137,7 +168,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Export commands: PNG/SVG/PDF export, screenshot
 - Inline styling: `--fill`, `--stroke`, `--radius` etc. on create commands
 
-[unreleased]: https://github.com/dannote/figma-use/compare/v0.2.1...HEAD
+[unreleased]: https://github.com/dannote/figma-use/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/dannote/figma-use/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/dannote/figma-use/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/dannote/figma-use/compare/v0.1.5...v0.2.0
 [0.1.5]: https://github.com/dannote/figma-use/compare/v0.1.4...v0.1.5

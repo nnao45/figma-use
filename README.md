@@ -27,16 +27,28 @@ figma-use gives AI agents **full read/write control** over Figma.
 ## How it works
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│                 │     │                 │     │                 │
-│   AI Agent /    │────▶│   figma-use     │────▶│     Figma       │
-│   CLI           │ HTTP│   proxy         │ WS  │     Plugin      │
-│                 │◀────│   :38451        │◀────│                 │
-│                 │     │                 │     │                 │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
+┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
+│                 │      │                 │      │                 │
+│   AI Agent /    │─────▶│   figma-use     │─────▶│     Figma       │
+│   CLI           │ HTTP │   proxy         │  WS  │     Plugin      │
+│                 │◀─────│   :38451        │◀─────│                 │
+│                 │      │                 │      │                 │
+└─────────────────┘      └────────┬────────┘      └─────────────────┘
+                                  │
+                                  │ WebSocket (persistent)
+                                  ▼
+                         ┌─────────────────┐
+                         │     Figma       │
+                         │   Multiplayer   │
+                         │     Server      │
+                         └─────────────────┘
 ```
 
-The CLI sends commands to a local proxy server, which forwards them via WebSocket to a Figma plugin. The plugin executes commands using the Figma API and returns results.
+Two communication paths:
+- **Plugin API** — most commands go through the Figma plugin for full API access
+- **Multiplayer WebSocket** — the `render` command writes directly to Figma's multiplayer server for ~100x faster node creation
+
+The proxy maintains persistent connections for fast repeated operations.
 
 ## Installation
 

@@ -148,6 +148,36 @@ figma-use group create "1:2,1:3"
 figma-use group ungroup <id>
 ```
 
+### Render React Components
+
+Render TSX/JSX directly to Figma (~100x faster than plugin API):
+
+```bash
+# From file
+figma-use render ./Card.figma.tsx
+
+# JSX snippet from stdin
+echo '<Frame style={{width: 200, height: 100, backgroundColor: "#FF0000"}} />' | figma-use render --stdin
+
+# Nested elements
+echo '<Frame style={{padding: 20, gap: 10, flexDirection: "column"}}>
+  <Text style={{fontSize: 24, color: "#000"}}>Title</Text>
+  <Rectangle style={{width: 100, height: 50, backgroundColor: "#3B82F6"}} />
+</Frame>' | figma-use render --stdin
+
+# With props
+figma-use render ./Card.figma.tsx --props '{"title": "Hello"}'
+
+# Into specific parent
+figma-use render ./Card.figma.tsx --parent "1:23"
+```
+
+**Requires:**
+1. Figma with `figma --remote-debugging-port=9222`
+2. Proxy running: `figma-use proxy`
+
+Available elements: `Frame`, `Rectangle`, `Ellipse`, `Text`, `Line`, `Star`, `Polygon`, `Vector`, `Component`, `Instance`, `Group`
+
 ### Eval (Arbitrary Code)
 
 ```bash
