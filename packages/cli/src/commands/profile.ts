@@ -62,8 +62,10 @@ export default defineCommand({
     const startTime = Date.now()
 
     // Run the actual CLI command using the same binary
+    // Use shell to preserve quoting
     const cmdResult = await new Promise<{ stdout: string; stderr: string; code: number }>((resolve) => {
-      const proc = spawn(process.argv[0], [process.argv[1], ...args.command.split(' '), '--json'], {
+      const fullCmd = `${process.argv[0]} ${process.argv[1]} ${args.command} --json`
+      const proc = spawn('sh', ['-c', fullCmd], {
         stdio: ['ignore', 'pipe', 'pipe']
       })
       
