@@ -183,7 +183,7 @@ export class FigmaMultiplayerClient {
   }
 
   /**
-   * Send node changes to Figma
+   * Send node changes to Figma (fire and forget)
    */
   async sendNodeChanges(nodeChanges: NodeChange[]): Promise<void> {
     if (this.state !== 'ready' || !this.ws || !this.sessionInfo) {
@@ -198,6 +198,43 @@ export class FigmaMultiplayerClient {
     
     const encoded = encodeMessage(message)
     this.ws.send(encoded)
+  }
+
+  /**
+   * Send node changes and wait for server ACK (NODE_CHANGES echo)
+   * This guarantees nodes are synced before returning
+   */
+  async sendNodeChangesSync(nodeChanges: NodeChange[], timeout = 5000): Promise<void> {
+    if (this.state !== 'ready' || !this.ws || !this.sessionInfo) {
+      throw new Error('Not connected')
+    }
+    
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.ws?.removeEventListener('message', handler)
+        reject(new Error('ACK timeout'))
+      }, timeout)
+      
+      const handler = (event: MessageEvent) => {
+        if (!(event.data instanceof ArrayBuffer)) return
+        
+        let data = new Uint8Array(event.data)
+        if (hasFigWireHeader(data)) data = skipFigWireHeader(data)
+        if (!isZstdCompressed(data)) return
+        
+        try {
+          const dec = decompress(data)
+          if (dec[0] === 1 && dec[1] === MESSAGE_TYPES.NODE_CHANGES) {
+            clearTimeout(timer)
+            this.ws?.removeEventListener('message', handler)
+            resolve()
+          }
+        } catch {}
+      }
+      
+      this.ws!.addEventListener('message', handler)
+      this.sendNodeChanges(nodeChanges)
+    })
   }
 
   /**
