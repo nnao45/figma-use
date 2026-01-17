@@ -257,7 +257,16 @@ figma-use render ./Card.figma.tsx
 # With props
 figma-use render ./Card.figma.tsx --props '{"title": "Hello", "items": ["A", "B"]}'
 
-# From stdin (useful for AI-generated components)
+# JSX snippet from stdin (auto-wrapped into component)
+echo '<Frame style={{width: 200, height: 100, backgroundColor: "#FF0000"}} />' | figma-use render --stdin
+
+# Nested components from stdin
+echo '<Frame style={{padding: 20, gap: 10}}>
+  <Text style={{fontSize: 24}}>Title</Text>
+  <Rectangle style={{width: 100, height: 50, backgroundColor: "#3B82F6"}} />
+</Frame>' | figma-use render --stdin
+
+# Full component from stdin
 cat component.tsx | figma-use render --stdin
 
 # Into specific parent
