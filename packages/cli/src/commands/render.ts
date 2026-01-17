@@ -9,7 +9,7 @@ import * as React from 'react'
 import { renderToNodeChanges } from '../render/index.ts'
 import { FigmaMultiplayerClient, getCookiesFromDevTools, initCodec } from '../multiplayer/index.ts'
 import { COMPONENT_NAMES } from '../render/components.tsx'
-import { spawnSync } from 'child_process'
+import { transformSync } from 'esbuild'
 
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = []
@@ -56,19 +56,14 @@ function transformJsxSnippet(code: string): string {
   
   // Use esbuild to transform JSX to React.createElement
   const jsxCode = `(${trimmed})`
-  const result = spawnSync('bunx', [
-    'esbuild', '--loader=tsx', '--jsx=transform', 
-    '--jsx-factory=React.createElement', '--jsx-fragment=React.Fragment'
-  ], {
-    input: jsxCode,
-    encoding: 'utf-8',
+  const result = transformSync(jsxCode, {
+    loader: 'tsx',
+    jsx: 'transform',
+    jsxFactory: 'React.createElement',
+    jsxFragment: 'React.Fragment',
   })
   
-  if (result.error || result.status !== 0) {
-    throw new Error(`JSX transform failed: ${result.stderr || result.error}`)
-  }
-  
-  const transformedJsx = result.stdout.trim().replace(/;\s*$/, '')
+  const transformedJsx = result.code.trim().replace(/;\s*$/, '')
   
   return `export default function createComponent(React) {
 ${componentDefs}
