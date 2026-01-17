@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'bun:test'
 import { run } from '../helpers.ts'
+import { setupTestPage, teardownTestPage } from '../helpers.ts'
 
 describe('page', () => {
   test('list returns pages', async () => {

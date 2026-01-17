@@ -1208,6 +1208,9 @@ function serializeNode(node: BaseNode): object {
   if ('strokeWeight' in node && typeof node.strokeWeight === 'number' && node.strokeWeight > 0) {
     base.strokeWeight = node.strokeWeight
   }
+  if ('cornerRadius' in node && typeof node.cornerRadius === 'number' && node.cornerRadius > 0) {
+    base.cornerRadius = node.cornerRadius
+  }
 
   if ('componentPropertyDefinitions' in node) {
     try {

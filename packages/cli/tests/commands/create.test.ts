@@ -1,19 +1,18 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
-import { run, trackNode } from '../helpers.ts'
+import { run, trackNode, setupTestPage, teardownTestPage } from '../helpers.ts'
 
 describe('create', () => {
   let testFrameId: string
 
   beforeAll(async () => {
+    await setupTestPage('create')
     const frame = await run('create frame --x 0 --y 0 --width 800 --height 600 --name "Create Tests" --json') as { id: string }
     testFrameId = frame.id
     trackNode(testFrameId)
   })
 
   afterAll(async () => {
-    if (testFrameId) {
-      await run(`node delete ${testFrameId} --json`).catch(() => {})
-    }
+    await teardownTestPage()
   })
 
   describe('rect', () => {

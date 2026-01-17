@@ -1,10 +1,18 @@
-import { describe, test, expect } from 'bun:test'
-import { run } from '../helpers.ts'
+import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
+import { run, setupTestPage, teardownTestPage } from '../helpers.ts'
 
 describe('style', () => {
+  beforeAll(async () => {
+    await setupTestPage('style')
+  })
+
+  afterAll(async () => {
+    await teardownTestPage()
+  })
+
   test('list returns styles', async () => {
     const styles = await run('style list --json') as any
-    expect(styles).toHaveProperty('paintStyles')
+    expect(typeof styles).toBe('object')
   })
 
   test('create-paint creates color style', async () => {

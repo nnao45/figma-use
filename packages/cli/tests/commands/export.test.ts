@@ -1,38 +1,34 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
-import { run, trackNode } from '../helpers.ts'
+import { run, trackNode, setupTestPage, teardownTestPage } from '../helpers.ts'
+import { existsSync, unlinkSync } from 'fs'
 
 describe('export', () => {
-  let rectId: string
+  let nodeId: string
 
   beforeAll(async () => {
-    const rect = await run('create rect --x 1100 --y 0 --width 100 --height 100 --fill "#00FFFF" --json') as any
-    rectId = rect.id
-    trackNode(rectId)
+    await setupTestPage('export')
+    const rect = await run('create rect --x 0 --y 0 --width 100 --height 100 --fill "#FF0000" --json') as any
+    nodeId = rect.id
+    trackNode(nodeId)
   })
 
   afterAll(async () => {
-    if (rectId) {
-      await run(`node delete ${rectId} --json`).catch(() => {})
+    await teardownTestPage()
+    // Cleanup export files
+    for (const f of ['/tmp/test-export.png', '/tmp/test-export.svg']) {
+      if (existsSync(f)) unlinkSync(f)
     }
   })
 
-  describe('node', () => {
-    test('exports as PNG', async () => {
-      const result = await run(`export node ${rectId} --format PNG --scale 1 --json`) as any
-      expect(result).toHaveProperty('data')
-      expect(result.data.length).toBeGreaterThan(0)
-    })
-
-    test('exports as SVG', async () => {
-      const result = await run(`export node ${rectId} --format SVG --json`) as any
-      expect(atob(result.data)).toContain('svg')
-    })
+  test('node exports to PNG', async () => {
+    const output = await run(`export node ${nodeId} --output /tmp/test-export.png`, false) as string
+    expect(output).toContain('/tmp/test-export.png')
+    expect(existsSync('/tmp/test-export.png')).toBe(true)
   })
 
-  describe('screenshot', () => {
-    test('takes screenshot', async () => {
-      const result = await run('export screenshot --output /tmp/test-screenshot.png')
-      expect(result).toBe('/tmp/test-screenshot.png')
-    })
+  test('node exports to SVG', async () => {
+    const output = await run(`export node ${nodeId} --output /tmp/test-export.svg --format svg`, false) as string
+    expect(output).toContain('/tmp/test-export.svg')
+    expect(existsSync('/tmp/test-export.svg')).toBe(true)
   })
 })

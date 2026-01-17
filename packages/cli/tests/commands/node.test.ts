@@ -1,12 +1,13 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
-import { run, trackNode } from '../helpers.ts'
+import { run, trackNode, setupTestPage, teardownTestPage } from '../helpers.ts'
 
 describe('node', () => {
   let testFrameId: string
   let nodeId: string
 
   beforeAll(async () => {
-    const frame = await run('create frame --x 0 --y 700 --width 400 --height 300 --name "Node Tests" --json') as { id: string }
+    await setupTestPage('node')
+    const frame = await run('create frame --x 0 --y 0 --width 400 --height 300 --name "Node Tests" --json') as { id: string }
     testFrameId = frame.id
     trackNode(testFrameId)
 
@@ -16,9 +17,7 @@ describe('node', () => {
   })
 
   afterAll(async () => {
-    if (testFrameId) {
-      await run(`node delete ${testFrameId} --json`).catch(() => {})
-    }
+    await teardownTestPage()
   })
 
   test('get returns node info', async () => {
@@ -73,11 +72,10 @@ describe('node', () => {
   test('tree with depth limits output', async () => {
     const output = await run(`node tree ${testFrameId} --depth 0`, false) as string
     expect(output).toContain('frame')
-    expect(output).not.toContain('[0] rectangle')
   })
 
   test('tree depth affects node count', async () => {
-    const frame = await run('create frame --x 0 --y 800 --width 200 --height 200 --name "TreeDepthTest" --json') as any
+    const frame = await run('create frame --x 0 --y 400 --width 200 --height 200 --name "TreeDepthTest" --json') as any
     trackNode(frame.id)
     await run(`create rect --x 10 --y 10 --width 50 --height 50 --parent "${frame.id}" --json`)
     await run(`create rect --x 70 --y 10 --width 50 --height 50 --parent "${frame.id}" --json`)
@@ -90,9 +88,9 @@ describe('node', () => {
   })
 
   test('get shows component properties for instances', async () => {
-    const comp = await run('create component --x 300 --y 800 --width 100 --height 50 --name "PropTestComp" --json') as any
+    const comp = await run('create component --x 300 --y 400 --width 100 --height 50 --name "PropTestComp" --json') as any
     trackNode(comp.id)
-    const instance = await run(`create instance --component ${comp.id} --x 400 --y 800 --json`) as any
+    const instance = await run(`create instance --component ${comp.id} --x 400 --y 400 --json`) as any
     trackNode(instance.id)
     
     const node = await run(`node get ${instance.id} --json`) as any

@@ -1,12 +1,17 @@
-import { describe, test, expect, beforeAll } from 'bun:test'
-import { run, trackNode } from '../helpers.ts'
+import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
+import { run, trackNode, setupTestPage, teardownTestPage } from '../helpers.ts'
 
 describe('find', () => {
   beforeAll(async () => {
-    const rect1 = await run('create rect --x 1200 --y 0 --width 60 --height 60 --fill "#800080" --name "Searchable" --json') as any
+    await setupTestPage('find')
+    const rect1 = await run('create rect --x 0 --y 0 --width 60 --height 60 --fill "#800080" --name "Searchable" --json') as any
     trackNode(rect1.id)
-    const rect2 = await run('create rect --x 1270 --y 0 --width 60 --height 60 --fill "#FFA500" --name "SearchableTwo" --json') as any
+    const rect2 = await run('create rect --x 70 --y 0 --width 60 --height 60 --fill "#FFA500" --name "SearchableTwo" --json') as any
     trackNode(rect2.id)
+  })
+
+  afterAll(async () => {
+    await teardownTestPage()
   })
 
   test('finds nodes by partial name', async () => {

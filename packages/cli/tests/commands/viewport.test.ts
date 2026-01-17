@@ -1,23 +1,28 @@
-import { describe, test, expect, beforeAll } from 'bun:test'
-import { run, trackNode } from '../helpers.ts'
+import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
+import { run, trackNode, setupTestPage, teardownTestPage } from '../helpers.ts'
 
 describe('viewport', () => {
-  let frameId: string
+  let nodeId: string
 
   beforeAll(async () => {
-    const frame = await run('create frame --x 0 --y 1100 --width 200 --height 200 --fill "#EEEEEE" --json') as any
-    frameId = frame.id
-    trackNode(frameId)
+    await setupTestPage('viewport')
+    const rect = await run('create rect --x 0 --y 0 --width 100 --height 100 --fill "#00FF00" --json') as any
+    nodeId = rect.id
+    trackNode(nodeId)
+  })
+
+  afterAll(async () => {
+    await teardownTestPage()
   })
 
   test('get returns viewport info', async () => {
-    const vp = await run('viewport get --json') as any
-    expect(vp).toHaveProperty('center')
-    expect(vp).toHaveProperty('zoom')
+    const result = await run('viewport get --json') as any
+    expect(result).toHaveProperty('center')
+    expect(result).toHaveProperty('zoom')
   })
 
   test('zoom-to-fit zooms to nodes', async () => {
-    const result = await run(`viewport zoom-to-fit ${frameId} --json`) as any
+    const result = await run(`viewport zoom-to-fit "${nodeId}" --json`) as any
     expect(result).toHaveProperty('center')
     expect(result).toHaveProperty('zoom')
   })
