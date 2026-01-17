@@ -1,13 +1,12 @@
 import { defineCommand } from 'citty'
-import { sendCommand } from '../client.ts'
-import { printResult } from '../output.ts'
+import { sendCommand, printResult } from '../client.ts'
 
 export default defineCommand({
-  meta: { description: 'Execute arbitrary code in Figma plugin context' },
+  meta: { description: 'Execute JavaScript in Figma plugin context' },
   args: {
-    code: { type: 'positional', description: 'JavaScript code to execute', required: true },
-    json: { type: 'boolean', description: 'Output raw JSON' },
-    timeout: { type: 'string', description: 'Timeout in seconds' }
+    code: { type: 'positional', description: 'JavaScript code', required: true },
+    timeout: { type: 'string', description: 'Timeout in seconds' },
+    json: { type: 'boolean', description: 'Output as JSON' }
   },
   async run({ args }) {
     const result = await sendCommand('eval', { code: args.code }, { 

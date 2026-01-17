@@ -377,10 +377,12 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
     }
 
     case 'set-stroke-color': {
-      const { id, color } = args as { id: string; color: string }
+      const { id, color, weight, align } = args as { id: string; color: string; weight?: number; align?: string }
       const node = await figma.getNodeByIdAsync(id) as GeometryMixin | null
       if (!node || !('strokes' in node)) throw new Error('Node not found')
       node.strokes = [{ type: 'SOLID', color: hexToRgb(color) }]
+      if (weight !== undefined && 'strokeWeight' in node) (node as any).strokeWeight = weight
+      if (align && 'strokeAlign' in node) (node as any).strokeAlign = align as 'INSIDE' | 'OUTSIDE' | 'CENTER'
       return serializeNode(node as BaseNode)
     }
 
@@ -976,6 +978,89 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       return await fn(figma)
     }
 
+    // ==================== VARIABLES ====================
+    case 'get-variables': {
+      const { type } = args as { type?: string }
+      const variables = await figma.variables.getLocalVariablesAsync(type as VariableResolvedDataType | undefined)
+      return variables.map(v => serializeVariable(v))
+    }
+
+    case 'get-variable': {
+      const { id } = args as { id: string }
+      const variable = await figma.variables.getVariableByIdAsync(id)
+      if (!variable) throw new Error('Variable not found')
+      return serializeVariable(variable)
+    }
+
+    case 'create-variable': {
+      const { name, collectionId, type, value } = args as { name: string; collectionId: string; type: string; value?: string }
+      const collection = await figma.variables.getVariableCollectionByIdAsync(collectionId)
+      if (!collection) throw new Error('Collection not found')
+      const variable = figma.variables.createVariable(name, collection, type as VariableResolvedDataType)
+      if (value !== undefined && collection.modes.length > 0) {
+        const modeId = collection.modes[0].modeId
+        variable.setValueForMode(modeId, parseVariableValue(value, type))
+      }
+      return serializeVariable(variable)
+    }
+
+    case 'set-variable-value': {
+      const { id, modeId, value } = args as { id: string; modeId: string; value: string }
+      const variable = await figma.variables.getVariableByIdAsync(id)
+      if (!variable) throw new Error('Variable not found')
+      variable.setValueForMode(modeId, parseVariableValue(value, variable.resolvedType))
+      return serializeVariable(variable)
+    }
+
+    case 'delete-variable': {
+      const { id } = args as { id: string }
+      const variable = await figma.variables.getVariableByIdAsync(id)
+      if (!variable) throw new Error('Variable not found')
+      variable.remove()
+      return { deleted: true }
+    }
+
+    case 'bind-variable': {
+      const { nodeId, field, variableId } = args as { nodeId: string; field: string; variableId: string }
+      const node = await figma.getNodeByIdAsync(nodeId) as SceneNode | null
+      if (!node) throw new Error('Node not found')
+      const variable = await figma.variables.getVariableByIdAsync(variableId)
+      if (!variable) throw new Error('Variable not found')
+      if ('setBoundVariable' in node) {
+        (node as any).setBoundVariable(field, variable)
+      } else {
+        throw new Error('Node does not support variable binding')
+      }
+      return serializeNode(node)
+    }
+
+    // ==================== VARIABLE COLLECTIONS ====================
+    case 'get-variable-collections': {
+      const collections = await figma.variables.getLocalVariableCollectionsAsync()
+      return collections.map(c => serializeCollection(c))
+    }
+
+    case 'get-variable-collection': {
+      const { id } = args as { id: string }
+      const collection = await figma.variables.getVariableCollectionByIdAsync(id)
+      if (!collection) throw new Error('Collection not found')
+      return serializeCollection(collection)
+    }
+
+    case 'create-variable-collection': {
+      const { name } = args as { name: string }
+      const collection = figma.variables.createVariableCollection(name)
+      return serializeCollection(collection)
+    }
+
+    case 'delete-variable-collection': {
+      const { id } = args as { id: string }
+      const collection = await figma.variables.getVariableCollectionByIdAsync(id)
+      if (!collection) throw new Error('Collection not found')
+      collection.remove()
+      return { deleted: true }
+    }
+
     default:
       throw new Error(`Unknown command: ${command}`)
   }
@@ -1106,5 +1191,54 @@ function hexToRgba(hex: string): RGBA {
     g: parseInt(clean.slice(2, 4), 16) / 255,
     b: parseInt(clean.slice(4, 6), 16) / 255,
     a: hasAlpha ? parseInt(clean.slice(6, 8), 16) / 255 : 1
+  }
+}
+
+function serializeVariable(v: Variable): object {
+  return {
+    id: v.id,
+    name: v.name,
+    type: v.resolvedType,
+    collectionId: v.variableCollectionId,
+    description: v.description || undefined,
+    valuesByMode: Object.fromEntries(
+      Object.entries(v.valuesByMode).map(([modeId, value]) => [
+        modeId, 
+        serializeVariableValue(value, v.resolvedType)
+      ])
+    )
+  }
+}
+
+function serializeCollection(c: VariableCollection): object {
+  return {
+    id: c.id,
+    name: c.name,
+    modes: c.modes.map(m => ({ modeId: m.modeId, name: m.name })),
+    variableIds: c.variableIds
+  }
+}
+
+function serializeVariableValue(value: VariableValue, type: string): unknown {
+  if (type === 'COLOR' && typeof value === 'object' && 'r' in value) {
+    return rgbToHex(value as RGB)
+  }
+  if (typeof value === 'object' && 'type' in value && (value as any).type === 'VARIABLE_ALIAS') {
+    return { alias: (value as VariableAlias).id }
+  }
+  return value
+}
+
+function parseVariableValue(value: string, type: string): VariableValue {
+  switch (type) {
+    case 'COLOR':
+      return hexToRgb(value)
+    case 'FLOAT':
+      return parseFloat(value)
+    case 'BOOLEAN':
+      return value === 'true'
+    case 'STRING':
+    default:
+      return value
   }
 }
