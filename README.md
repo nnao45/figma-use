@@ -1,8 +1,8 @@
 # figma-use
 
-Control Figma from the command line. Like [browser-use](https://github.com/browser-use/browser-use), but for Figma.
+Control Figma from the command line. Built for AI agents to create and manipulate designs programmatically.
 
-Built for AI agents to create and manipulate Figma designs programmatically.
+Inspired by [agent-browser](https://github.com/vercel-labs/agent-browser) (browser automation) and [bird](https://github.com/steipete/bird) (Twitter CLI) — fast CLIs that save tokens and give agents direct control.
 
 ## Why not the official Figma MCP?
 
@@ -246,22 +246,39 @@ figma-use is designed to work with AI coding agents like [Claude Code](https://d
 
 ### Using with Claude Code
 
-Add the [web-to-figma skill](https://github.com/anthropics/claude-code/tree/main/skills) to your agent:
+Copy the included skill to teach your agent how to use figma-use:
 
 ```bash
-# The skill teaches the agent how to:
-# - Extract styles from web pages
-# - Recreate UI components in Figma
-# - Match colors, fonts, spacing, and layout
+# From npm package
+cp node_modules/@dannote/figma-use/SKILL.md ~/.claude/skills/figma-use/SKILL.md
+
+# Or download directly
+mkdir -p ~/.claude/skills/figma-use
+curl -o ~/.claude/skills/figma-use/SKILL.md \
+  https://raw.githubusercontent.com/dannote/figma-use/main/SKILL.md
 ```
 
 Then just ask:
 
 ```
-Recreate this login form in Figma: https://example.com/login
+Create a card component with an avatar, title, and description in Figma
 ```
 
-The agent will use `figma-use` commands to build the design.
+### Minimal Setup
+
+For agents that don't support skills, add to your project's `CLAUDE.md` or `AGENTS.md`:
+
+```markdown
+## Figma Automation
+
+Use `figma-use` for Figma control. Run `figma-use --help` for all 73 commands.
+
+Quick workflow:
+1. `figma-use status` - Check plugin connection
+2. `figma-use create-frame --x 0 --y 0 --width 400 --height 300 --fill "#FFF" --name "Card"`
+3. `figma-use create-text --x 20 --y 20 --text "Title" --fontSize 24 --fill "#000" --parentId "1:2"`
+4. `figma-use screenshot --output preview.png` - Verify result
+```
 
 ## License
 
