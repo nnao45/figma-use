@@ -1,11 +1,5 @@
 import { sendCommand } from './client.ts'
-
-interface NodeInfo {
-  width?: number
-  height?: number
-  x?: number
-  y?: number
-}
+import type { FigmaNode, FigmaViewport } from './types.ts'
 
 const MAX_PIXELS = 4096 * 4096
 const MAX_DIMENSION = 4096
@@ -39,7 +33,7 @@ export async function checkExportSize(
 ): Promise<{ ok: boolean; message?: string }> {
   if (force) return { ok: true }
 
-  const node = await sendCommand('get-node-info', { id }) as NodeInfo | null
+  const node = await sendCommand('get-node-info', { id }) as FigmaNode | null
   if (!node || !node.width || !node.height) return { ok: true }
 
   const width = Math.round(node.width * scale)
@@ -54,7 +48,7 @@ export async function checkViewportSize(
 ): Promise<{ ok: boolean; message?: string }> {
   if (force) return { ok: true }
 
-  const viewport = await sendCommand('get-viewport', {}) as { bounds: { width: number; height: number } }
+  const viewport = await sendCommand('get-viewport', {}) as FigmaViewport
   const width = Math.round(viewport.bounds.width * scale)
   const height = Math.round(viewport.bounds.height * scale)
 
@@ -68,7 +62,7 @@ export async function checkSelectionSize(
 ): Promise<{ ok: boolean; message?: string }> {
   if (force) return { ok: true }
 
-  const selection = await sendCommand('get-selection', {}) as NodeInfo[]
+  const selection = await sendCommand('get-selection', {}) as FigmaNode[]
   if (selection.length === 0) return { ok: true }
 
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity

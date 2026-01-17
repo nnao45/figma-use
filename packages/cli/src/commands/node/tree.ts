@@ -1,29 +1,6 @@
 import { defineCommand } from 'citty'
 import { sendCommand, handleError } from '../../client.ts'
-
-interface NodeInfo {
-  id: string
-  name: string
-  type: string
-  x?: number
-  y?: number
-  width?: number
-  height?: number
-  fills?: Array<{ type: string; color?: string; opacity?: number }>
-  strokes?: Array<{ type: string; color?: string }>
-  strokeWeight?: number
-  cornerRadius?: number
-  opacity?: number
-  visible?: boolean
-  locked?: boolean
-  layoutMode?: string
-  itemSpacing?: number
-  children?: NodeInfo[]
-  characters?: string
-  fontSize?: number
-  fontFamily?: string
-  fontStyle?: string
-}
+import type { FigmaNode } from '../../types.ts'
 
 function formatColor(fill: { type: string; color?: string; opacity?: number }): string {
   if (fill.type === 'SOLID' && fill.color) {
@@ -35,7 +12,7 @@ function formatColor(fill: { type: string; color?: string; opacity?: number }): 
   return fill.type.toLowerCase()
 }
 
-function formatNode(node: NodeInfo, depth: number, index: number, options: { 
+function formatNode(node: FigmaNode, depth: number, index: number, options: { 
   showHidden: boolean
   maxDepth: number
   interactive: boolean
@@ -48,11 +25,9 @@ function formatNode(node: NodeInfo, depth: number, index: number, options: {
   const indent = '  '.repeat(depth)
   const type = node.type.toLowerCase()
   
-  // Interactive types that agents care about
   const isInteractive = ['frame', 'component', 'instance', 'text', 'rectangle', 'ellipse', 'vector', 'group', 'boolean_operation'].includes(node.type.toLowerCase().replace('_', ''))
   
   if (options.interactive && !isInteractive && depth > 0) {
-    // Still recurse into children
     if (node.children) {
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i]
@@ -62,20 +37,16 @@ function formatNode(node: NodeInfo, depth: number, index: number, options: {
     return lines
   }
   
-  // Build line
   let line = `${indent}[${index}] ${type} "${node.name}" (${node.id})`
   
-  // Add properties
   const props: string[] = []
   
-  // Size and position
   if (node.width !== undefined && node.height !== undefined) {
     const x = node.x !== undefined ? Math.round(node.x) : 0
     const y = node.y !== undefined ? Math.round(node.y) : 0
     props.push(`${Math.round(node.width)}×${Math.round(node.height)} at (${x}, ${y})`)
   }
   
-  // Fill
   if (node.fills?.length) {
     const solidFill = node.fills.find(f => f.type === 'SOLID')
     if (solidFill) {
@@ -83,7 +54,6 @@ function formatNode(node: NodeInfo, depth: number, index: number, options: {
     }
   }
   
-  // Stroke
   if (node.strokes?.length && node.strokeWeight) {
     const solidStroke = node.strokes.find(s => s.type === 'SOLID')
     if (solidStroke?.color) {
@@ -91,19 +61,16 @@ function formatNode(node: NodeInfo, depth: number, index: number, options: {
     }
   }
   
-  // Radius
   if (node.cornerRadius) {
     props.push(`radius: ${node.cornerRadius}`)
   }
   
-  // Layout
   if (node.layoutMode && node.layoutMode !== 'NONE') {
     const layout = node.layoutMode === 'HORIZONTAL' ? 'row' : 'col'
     const gap = node.itemSpacing ? ` gap=${node.itemSpacing}` : ''
     props.push(`layout: ${layout}${gap}`)
   }
   
-  // Text
   if (node.characters) {
     const text = node.characters.length > 40 
       ? node.characters.slice(0, 40) + '…' 
@@ -117,12 +84,10 @@ function formatNode(node: NodeInfo, depth: number, index: number, options: {
     props.push(`font: ${node.fontSize}px${font ? ` ${font}${style}` : ''}`)
   }
   
-  // Opacity
   if (node.opacity !== undefined && node.opacity < 1) {
     props.push(`opacity: ${Math.round(node.opacity * 100)}%`)
   }
   
-  // State
   if (node.visible === false) props.push('hidden')
   if (node.locked) props.push('locked')
   
@@ -132,7 +97,6 @@ function formatNode(node: NodeInfo, depth: number, index: number, options: {
   
   lines.push(line)
   
-  // Children
   if (node.children && (options.maxDepth === -1 || depth < options.maxDepth)) {
     for (let i = 0; i < node.children.length; i++) {
       const child = node.children[i]
@@ -158,9 +122,9 @@ export default defineCommand({
   async run({ args }) {
     try {
       const id = args.id || (await sendCommand('get-current-page', {}) as { id: string }).id
-      const result = await sendCommand('get-node-tree', { id }) as NodeInfo
+      const result = await sendCommand('get-node-tree', { id }) as FigmaNode
       
-      const countNodes = (n: NodeInfo): number => 
+      const countNodes = (n: FigmaNode): number => 
         1 + (n.children?.reduce((sum, c) => sum + countNodes(c), 0) || 0)
       const total = countNodes(result)
       
