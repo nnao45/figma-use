@@ -7,6 +7,7 @@
 
 import Reconciler from 'react-reconciler'
 import type { NodeChange } from '../multiplayer/codec.ts'
+import { parseColor } from '../color.ts'
 
 export interface RenderOptions {
   sessionID: number
@@ -33,47 +34,7 @@ type Container = {
   children: Instance[]
 }
 
-function parseColor(color: string): { r: number; g: number; b: number; a: number } {
-  if (color.startsWith('#')) {
-    const h = color.slice(1)
-    if (h.length === 3) {
-      return {
-        r: parseInt(h[0] + h[0], 16) / 255,
-        g: parseInt(h[1] + h[1], 16) / 255,
-        b: parseInt(h[2] + h[2], 16) / 255,
-        a: 1,
-      }
-    }
-    if (h.length === 6) {
-      return {
-        r: parseInt(h.slice(0, 2), 16) / 255,
-        g: parseInt(h.slice(2, 4), 16) / 255,
-        b: parseInt(h.slice(4, 6), 16) / 255,
-        a: 1,
-      }
-    }
-    if (h.length === 8) {
-      return {
-        r: parseInt(h.slice(0, 2), 16) / 255,
-        g: parseInt(h.slice(2, 4), 16) / 255,
-        b: parseInt(h.slice(4, 6), 16) / 255,
-        a: parseInt(h.slice(6, 8), 16) / 255,
-      }
-    }
-  }
-  
-  const rgb = color.match(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+))?\s*\)/)
-  if (rgb) {
-    return {
-      r: parseInt(rgb[1]) / 255,
-      g: parseInt(rgb[2]) / 255,
-      b: parseInt(rgb[3]) / 255,
-      a: rgb[4] ? parseFloat(rgb[4]) : 1,
-    }
-  }
-  
-  return { r: 0, g: 0, b: 0, a: 1 }
-}
+
 
 function styleToNodeChange(
   type: string,

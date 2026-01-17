@@ -8,6 +8,7 @@
 
 import { compileSchema, type Schema } from 'kiwi-schema'
 import { isZstdCompressed, isKiwiMessage, getKiwiMessageType } from './protocol.ts'
+import { parseColor } from '../color.ts'
 import figmaSchema from './schema.ts'
 
 interface CompiledSchema {
@@ -273,14 +274,4 @@ export function createNodeChange(opts: {
   return change
 }
 
-/**
- * Parse hex color to Color object
- */
-function parseColor(hex: string): Color {
-  const h = hex.replace('#', '')
-  const r = parseInt(h.slice(0, 2), 16) / 255
-  const g = parseInt(h.slice(2, 4), 16) / 255
-  const b = parseInt(h.slice(4, 6), 16) / 255
-  const a = h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1
-  return { r, g, b, a }
-}
+
