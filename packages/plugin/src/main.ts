@@ -232,6 +232,8 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
           parent.appendChild(attachment.node)
         }
       }
+
+      figma.commitUndo()
       
       return results
     }
