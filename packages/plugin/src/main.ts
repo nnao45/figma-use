@@ -12,11 +12,26 @@ async function loadFont(family: string, style: string): Promise<void> {
   loadedFonts.add(key)
 }
 
+// Commands that need access to nodes on other pages
+const NEEDS_ALL_PAGES = new Set([
+  'get-node-info', 'get-node-tree', 'get-node-children',
+  'set-parent', 'clone-node', 'delete-node',
+  'get-pages', 'set-current-page',
+  'get-components', 'get-styles',
+  'export-node', 'screenshot'
+])
+
+let allPagesLoaded = false
+
 figma.ui.onmessage = async (msg: { type: string; id: string; command: string; args?: unknown }) => {
   if (msg.type !== 'command') return
 
   try {
-    await figma.loadAllPagesAsync()
+    // Only load all pages when needed
+    if (!allPagesLoaded && NEEDS_ALL_PAGES.has(msg.command)) {
+      await figma.loadAllPagesAsync()
+      allPagesLoaded = true
+    }
     const result = await handleCommand(msg.command, msg.args)
     figma.ui.postMessage({ type: 'result', id: msg.id, result })
   } catch (error) {
