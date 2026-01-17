@@ -507,4 +507,147 @@ describe('Figma Bridge CLI', () => {
       expect(result.deleted).toBe(true)
     })
   })
+
+  describe('set-layout-child', () => {
+    let frameId: string
+    let childId: string
+
+    beforeAll(async () => {
+      const frame = await run(`create-frame --x 1000 --y 10 --width 300 --height 80 --fill "#F5F5F5" --layoutMode HORIZONTAL --itemSpacing 8 --parentId "${testFrameId}"`) as any
+      frameId = frame.id
+      createdNodes.push(frameId)
+
+      const child = await run(`create-rectangle --x 0 --y 0 --width 60 --height 40 --fill "#E11D48" --parentId "${frameId}"`) as any
+      childId = child.id
+    })
+
+    test('sets horizontal sizing to FILL', async () => {
+      const result = await run(`set-layout-child --id "${childId}" --horizontalSizing FILL`) as any
+      expect(result.id).toBe(childId)
+    })
+
+    test('sets vertical sizing to FIXED', async () => {
+      const result = await run(`set-layout-child --id "${childId}" --verticalSizing FIXED`) as any
+      expect(result.id).toBe(childId)
+    })
+  })
+
+  describe('set-text-properties', () => {
+    let textId: string
+
+    beforeAll(async () => {
+      const text = await run(`create-text --x 1000 --y 110 --text "Typography test" --fontSize 16 --fill "#333333" --parentId "${testFrameId}"`) as any
+      textId = text.id
+      createdNodes.push(textId)
+    })
+
+    test('sets line height', async () => {
+      const result = await run(`set-text-properties --id "${textId}" --lineHeight 24`) as any
+      expect(result.id).toBe(textId)
+    })
+
+    test('sets letter spacing', async () => {
+      const result = await run(`set-text-properties --id "${textId}" --letterSpacing 1`) as any
+      expect(result.id).toBe(textId)
+    })
+
+    test('sets text alignment', async () => {
+      const result = await run(`set-text-properties --id "${textId}" --textAlign CENTER`) as any
+      expect(result.id).toBe(textId)
+    })
+
+    test('sets auto resize mode', async () => {
+      const result = await run(`set-text-properties --id "${textId}" --autoResize HEIGHT`) as any
+      expect(result.id).toBe(textId)
+    })
+  })
+
+  describe('set-min-max', () => {
+    let frameId: string
+
+    beforeAll(async () => {
+      const frame = await run(`create-frame --x 1000 --y 160 --width 200 --height 100 --fill "#EEEEEE" --layoutMode VERTICAL --parentId "${testFrameId}"`) as any
+      frameId = frame.id
+      createdNodes.push(frameId)
+    })
+
+    test('sets min width', async () => {
+      const result = await run(`set-min-max --id "${frameId}" --minWidth 100`) as any
+      expect(result.id).toBe(frameId)
+    })
+
+    test('sets max width', async () => {
+      const result = await run(`set-min-max --id "${frameId}" --maxWidth 400`) as any
+      expect(result.id).toBe(frameId)
+    })
+
+    test('sets min and max height', async () => {
+      const result = await run(`set-min-max --id "${frameId}" --minHeight 50 --maxHeight 300`) as any
+      expect(result.id).toBe(frameId)
+    })
+  })
+
+  describe('set-rotation', () => {
+    let nodeId: string
+
+    beforeAll(async () => {
+      const rect = await run(`create-rectangle --x 1000 --y 280 --width 60 --height 60 --fill "#10B981" --parentId "${testFrameId}"`) as any
+      nodeId = rect.id
+      createdNodes.push(nodeId)
+    })
+
+    test('rotates node', async () => {
+      const result = await run(`set-rotation --id "${nodeId}" --angle 45`) as any
+      expect(result.id).toBe(nodeId)
+    })
+
+    test('rotates to negative angle', async () => {
+      const result = await run(`set-rotation --id "${nodeId}" --angle -30`) as any
+      expect(result.id).toBe(nodeId)
+    })
+  })
+
+  describe('set-stroke-align', () => {
+    let nodeId: string
+
+    beforeAll(async () => {
+      const rect = await run(`create-rectangle --x 1080 --y 280 --width 60 --height 60 --fill "#FFFFFF" --stroke "#000000" --strokeWeight 4 --parentId "${testFrameId}"`) as any
+      nodeId = rect.id
+      createdNodes.push(nodeId)
+    })
+
+    test('sets stroke align to INSIDE', async () => {
+      const result = await run(`set-stroke-align --id "${nodeId}" --align INSIDE`) as any
+      expect(result.id).toBe(nodeId)
+    })
+
+    test('sets stroke align to OUTSIDE', async () => {
+      const result = await run(`set-stroke-align --id "${nodeId}" --align OUTSIDE`) as any
+      expect(result.id).toBe(nodeId)
+    })
+  })
+
+  describe('short hex colors', () => {
+    test('supports 3-char hex in rectangle', async () => {
+      const rect = await run(`create-rectangle --x 1000 --y 360 --width 50 --height 50 --fill "#F00" --parentId "${testFrameId}"`) as any
+      createdNodes.push(rect.id)
+      expect(rect.fills[0].color).toBe('#FF0000')
+    })
+
+    test('supports 3-char hex in text', async () => {
+      const text = await run(`create-text --x 1060 --y 360 --text "Short hex" --fontSize 14 --fill "#333" --parentId "${testFrameId}"`) as any
+      createdNodes.push(text.id)
+      expect(text.fills[0].color).toBe('#333333')
+    })
+  })
+
+  describe('individual corner radius', () => {
+    test('sets different corner radii', async () => {
+      const rect = await run(`create-rectangle --x 1000 --y 420 --width 80 --height 80 --fill "#8B5CF6" --parentId "${testFrameId}"`) as any
+      createdNodes.push(rect.id)
+      
+      const result = await run(`set-corner-radius --id "${rect.id}" --radius 0 --topLeft 16 --bottomRight 16`) as any
+      expect(result.id).toBe(rect.id)
+    })
+  })
 })

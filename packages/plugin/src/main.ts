@@ -595,6 +595,89 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       return serializeNode(node)
     }
 
+    case 'set-layout-child': {
+      const { id, horizontalSizing, verticalSizing, positioning, x, y } = args as {
+        id: string; horizontalSizing?: 'FIXED' | 'FILL' | 'HUG'; verticalSizing?: 'FIXED' | 'FILL' | 'HUG'
+        positioning?: 'AUTO' | 'ABSOLUTE'; x?: number; y?: number
+      }
+      const node = await figma.getNodeByIdAsync(id) as SceneNode | null
+      if (!node) throw new Error('Node not found')
+      if (horizontalSizing && 'layoutSizingHorizontal' in node) {
+        (node as FrameNode).layoutSizingHorizontal = horizontalSizing
+      }
+      if (verticalSizing && 'layoutSizingVertical' in node) {
+        (node as FrameNode).layoutSizingVertical = verticalSizing
+      }
+      if (positioning && 'layoutPositioning' in node) {
+        (node as FrameNode).layoutPositioning = positioning
+      }
+      if (positioning === 'ABSOLUTE') {
+        if (x !== undefined) node.x = x
+        if (y !== undefined) node.y = y
+      }
+      return serializeNode(node)
+    }
+
+    case 'set-text-properties': {
+      const { id, lineHeight, letterSpacing, textAlign, verticalAlign, autoResize, maxLines, paragraphSpacing, paragraphIndent } = args as {
+        id: string; lineHeight?: number | 'auto'; letterSpacing?: number
+        textAlign?: 'LEFT' | 'CENTER' | 'RIGHT' | 'JUSTIFIED'
+        verticalAlign?: 'TOP' | 'CENTER' | 'BOTTOM'
+        autoResize?: 'NONE' | 'WIDTH_AND_HEIGHT' | 'HEIGHT' | 'TRUNCATE'
+        maxLines?: number; paragraphSpacing?: number; paragraphIndent?: number
+      }
+      const node = await figma.getNodeByIdAsync(id) as TextNode | null
+      if (!node || node.type !== 'TEXT') throw new Error('Text node not found')
+      
+      const fontName = node.fontName as FontName
+      await figma.loadFontAsync(fontName)
+      
+      if (lineHeight !== undefined) {
+        node.lineHeight = lineHeight === 'auto' 
+          ? { unit: 'AUTO' } 
+          : { unit: 'PIXELS', value: lineHeight }
+      }
+      if (letterSpacing !== undefined) {
+        node.letterSpacing = { unit: 'PIXELS', value: letterSpacing }
+      }
+      if (textAlign) node.textAlignHorizontal = textAlign
+      if (verticalAlign) node.textAlignVertical = verticalAlign
+      if (autoResize) node.textAutoResize = autoResize
+      if (maxLines !== undefined) node.maxLines = maxLines
+      if (paragraphSpacing !== undefined) node.paragraphSpacing = paragraphSpacing
+      if (paragraphIndent !== undefined) node.paragraphIndent = paragraphIndent
+      return serializeNode(node)
+    }
+
+    case 'set-min-max': {
+      const { id, minWidth, maxWidth, minHeight, maxHeight } = args as {
+        id: string; minWidth?: number; maxWidth?: number; minHeight?: number; maxHeight?: number
+      }
+      const node = await figma.getNodeByIdAsync(id) as FrameNode | null
+      if (!node) throw new Error('Node not found')
+      if (minWidth !== undefined && 'minWidth' in node) node.minWidth = minWidth
+      if (maxWidth !== undefined && 'maxWidth' in node) node.maxWidth = maxWidth
+      if (minHeight !== undefined && 'minHeight' in node) node.minHeight = minHeight
+      if (maxHeight !== undefined && 'maxHeight' in node) node.maxHeight = maxHeight
+      return serializeNode(node)
+    }
+
+    case 'set-rotation': {
+      const { id, angle } = args as { id: string; angle: number }
+      const node = await figma.getNodeByIdAsync(id) as SceneNode | null
+      if (!node) throw new Error('Node not found')
+      node.rotation = angle
+      return serializeNode(node)
+    }
+
+    case 'set-stroke-align': {
+      const { id, align } = args as { id: string; align: 'INSIDE' | 'OUTSIDE' | 'CENTER' }
+      const node = await figma.getNodeByIdAsync(id) as GeometryMixin | null
+      if (!node || !('strokeAlign' in node)) throw new Error('Node not found')
+      node.strokeAlign = align
+      return serializeNode(node as BaseNode)
+    }
+
     // ==================== UPDATE STRUCTURE ====================
     case 'set-layout': {
       const { id, mode, wrap, clip, itemSpacing, primaryAxisAlignItems, counterAxisAlignItems,
@@ -983,8 +1066,19 @@ function rgbToHex(color: RGB): string {
   return `#${r}${g}${b}`.toUpperCase()
 }
 
-function hexToRgb(hex: string): RGB {
+function expandHex(hex: string): string {
   const clean = hex.replace('#', '')
+  if (clean.length === 3) {
+    return clean[0] + clean[0] + clean[1] + clean[1] + clean[2] + clean[2]
+  }
+  if (clean.length === 4) {
+    return clean[0] + clean[0] + clean[1] + clean[1] + clean[2] + clean[2] + clean[3] + clean[3]
+  }
+  return clean
+}
+
+function hexToRgb(hex: string): RGB {
+  const clean = expandHex(hex)
   return {
     r: parseInt(clean.slice(0, 2), 16) / 255,
     g: parseInt(clean.slice(2, 4), 16) / 255,
@@ -993,7 +1087,7 @@ function hexToRgb(hex: string): RGB {
 }
 
 function hexToRgba(hex: string): RGBA {
-  const clean = hex.replace('#', '')
+  const clean = expandHex(hex)
   const hasAlpha = clean.length === 8
   return {
     r: parseInt(clean.slice(0, 2), 16) / 255,

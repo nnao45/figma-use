@@ -107,3 +107,16 @@ export { default as 'select-nodes' } from './select-nodes.ts'
 export { default as 'set-constraints' } from './set-constraints.ts'
 export { default as 'set-auto-layout' } from './set-auto-layout.ts'
 export { default as 'set-blend-mode' } from './set-blend-mode.ts'
+
+// Layout child
+export { default as 'set-layout-child' } from './set-layout-child.ts'
+
+// Text properties
+export { default as 'set-text-properties' } from './set-text-properties.ts'
+
+// Min/Max constraints
+export { default as 'set-min-max' } from './set-min-max.ts'
+
+// Transform
+export { default as 'set-rotation' } from './set-rotation.ts'
+export { default as 'set-stroke-align' } from './set-stroke-align.ts'

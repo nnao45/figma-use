@@ -231,3 +231,66 @@ cd packages/plugin && bun run build
 ## License
 
 MIT
+
+### Layout Child Properties
+
+```bash
+# Make child fill available space
+set-layout-child --id "1:2" --horizontalSizing FILL
+
+# Make child fixed size  
+set-layout-child --id "1:2" --horizontalSizing FIXED --verticalSizing FIXED
+
+# Absolute position within auto-layout
+set-layout-child --id "1:2" --positioning ABSOLUTE --x 10 --y 10
+```
+
+### Text Properties
+
+```bash
+# Line height and spacing
+set-text-properties --id "1:2" --lineHeight 24 --letterSpacing 0.5
+
+# Alignment
+set-text-properties --id "1:2" --textAlign CENTER --verticalAlign MIDDLE
+
+# Auto resize behavior
+set-text-properties --id "1:2" --autoResize HEIGHT
+
+# Truncation
+set-text-properties --id "1:2" --autoResize TRUNCATE --maxLines 2
+
+# Paragraph formatting
+set-text-properties --id "1:2" --paragraphSpacing 16 --paragraphIndent 24
+```
+
+### Min/Max Constraints
+
+```bash
+set-min-max --id "1:2" --minWidth 100 --maxWidth 400
+set-min-max --id "1:2" --minHeight 50 --maxHeight 200
+```
+
+### Rotation
+
+```bash
+set-rotation --id "1:2" --angle 45
+set-rotation --id "1:2" --angle -30
+```
+
+### Stroke Alignment
+
+```bash
+set-stroke-align --id "1:2" --align INSIDE   # Stroke inside bounds
+set-stroke-align --id "1:2" --align OUTSIDE  # Stroke outside bounds
+set-stroke-align --id "1:2" --align CENTER   # Stroke centered on edge
+```
+
+### Short Hex Colors
+
+All color parameters support 3-char hex codes:
+```bash
+--fill "#F00"     # Expands to #FF0000
+--fill "#333"     # Expands to #333333
+--stroke "#0AF"   # Expands to #00AAFF
+```
