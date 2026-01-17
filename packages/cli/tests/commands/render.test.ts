@@ -1,28 +1,35 @@
 /**
- * Render tests using shared WebSocket connection
+ * Render tests using proxy connection pooling
  */
-import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
+import { describe, test, expect, beforeAll } from 'bun:test'
 import * as React from 'react'
 import { run } from '../helpers.ts'
 import { renderToNodeChanges } from '../../src/render/index.ts'
-import { 
-  FigmaMultiplayerClient, 
-  getCookiesFromDevTools, 
-  initCodec 
-} from '../../src/multiplayer/index.ts'
 import { getFileKey, getParentGUID } from '../../src/client.ts'
 
 // Import test component
 import Card from '../fixtures/Card.figma.tsx'
 
-let client: FigmaMultiplayerClient | null = null
+const PROXY_URL = 'http://localhost:38451'
+
+let fileKey = ''
 let sessionID = 0
 let parentGUID = { sessionID: 0, localID: 0 }
 let localIDCounter = 1
 
+async function sendToProxy(nodeChanges: unknown[]): Promise<void> {
+  const response = await fetch(`${PROXY_URL}/render`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fileKey, nodeChanges }),
+  })
+  const data = await response.json() as { error?: string }
+  if (data.error) {
+    throw new Error(data.error)
+  }
+}
+
 async function renderAndVerify(props: Record<string, unknown>): Promise<Array<{ id: string; name: string }>> {
-  if (!client) throw new Error('Client not connected')
-  
   const element = React.createElement(Card, props as any)
   const result = renderToNodeChanges(element, {
     sessionID,
@@ -31,7 +38,7 @@ async function renderAndVerify(props: Record<string, unknown>): Promise<Array<{ 
   })
   localIDCounter = result.nextLocalID
   
-  await client.sendNodeChangesSync(result.nodeChanges)
+  await sendToProxy(result.nodeChanges)
   
   return result.nodeChanges.map(nc => ({
     id: `${nc.guid.sessionID}:${nc.guid.localID}`,
@@ -41,20 +48,11 @@ async function renderAndVerify(props: Record<string, unknown>): Promise<Array<{ 
 
 describe('render', () => {
   beforeAll(async () => {
-    await initCodec()
-    const fileKey = await getFileKey()
+    fileKey = await getFileKey()
     parentGUID = await getParentGUID()
-    
-    const cookies = await getCookiesFromDevTools()
-    client = new FigmaMultiplayerClient(fileKey)
-    const session = await client.connect(cookies)
-    sessionID = session.sessionID
+    sessionID = parentGUID.sessionID || Date.now() % 1000000
     localIDCounter = Date.now() % 1000000
-  }, 20000)
-
-  afterAll(() => {
-    client?.close()
-  })
+  }, 10000)
 
   test('renders simple TSX component', async () => {
     const result = await renderAndVerify({ title: 'Test', items: ['A'] })
@@ -86,7 +84,7 @@ describe('render', () => {
     })
     localIDCounter = result.nextLocalID
     
-    await client!.sendNodeChangesSync(result.nodeChanges)
+    await sendToProxy(result.nodeChanges)
     
     const first = result.nodeChanges[0]!
     const cardId = `${first.guid.sessionID}:${first.guid.localID}`
@@ -130,7 +128,7 @@ describe('render', () => {
     const titleNode = result.find(n => n.name === 'Title')!
     expect(titleNode).toBeDefined()
     
-    const titleInfo = await run(`node get ${titleNode!.id} --json`) as { characters?: string }
+    const titleInfo = await run(`node get ${titleNode.id} --json`) as { characters?: string }
     expect(titleInfo.characters).toBe('Hello World')
   })
 
