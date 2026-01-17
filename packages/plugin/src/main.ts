@@ -592,6 +592,88 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       }
     }
 
+    case 'screenshot': {
+      const { scale } = args as { scale?: number }
+      const bounds = figma.viewport.bounds
+      const frame = figma.createFrame()
+      frame.name = '__screenshot_temp__'
+      frame.x = bounds.x
+      frame.y = bounds.y
+      frame.resize(bounds.width, bounds.height)
+      frame.fills = []
+      frame.clipsContent = true
+
+      // Clone visible nodes that intersect viewport
+      for (const node of figma.currentPage.children) {
+        if (node.id === frame.id) continue
+        if (!node.visible) continue
+        if ('absoluteBoundingBox' in node && node.absoluteBoundingBox) {
+          const nb = node.absoluteBoundingBox
+          if (nb.x + nb.width > bounds.x && nb.x < bounds.x + bounds.width &&
+              nb.y + nb.height > bounds.y && nb.y < bounds.y + bounds.height) {
+            const clone = node.clone()
+            clone.x = node.x - bounds.x
+            clone.y = node.y - bounds.y
+            frame.appendChild(clone)
+          }
+        }
+      }
+
+      const bytes = await frame.exportAsync({ format: 'PNG', scale: scale || 1 })
+      frame.remove()
+      return { data: figma.base64Encode(bytes) }
+    }
+
+    case 'export-selection': {
+      const { format, scale, padding } = args as { format?: 'PNG' | 'JPG' | 'SVG' | 'PDF'; scale?: number; padding?: number }
+      const selection = figma.currentPage.selection
+      if (selection.length === 0) throw new Error('No selection')
+
+      // If single node, export directly
+      if (selection.length === 1 && !padding) {
+        const bytes = await selection[0].exportAsync({
+          format: format || 'PNG',
+          ...(format !== 'SVG' && format !== 'PDF' ? { scale: scale || 2 } : {})
+        } as ExportSettings)
+        return { data: figma.base64Encode(bytes) }
+      }
+
+      // Multiple nodes or padding: create temp frame
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+      for (const node of selection) {
+        if ('absoluteBoundingBox' in node && node.absoluteBoundingBox) {
+          const b = node.absoluteBoundingBox
+          minX = Math.min(minX, b.x)
+          minY = Math.min(minY, b.y)
+          maxX = Math.max(maxX, b.x + b.width)
+          maxY = Math.max(maxY, b.y + b.height)
+        }
+      }
+
+      const pad = padding || 0
+      const frame = figma.createFrame()
+      frame.name = '__export_temp__'
+      frame.x = minX - pad
+      frame.y = minY - pad
+      frame.resize(maxX - minX + pad * 2, maxY - minY + pad * 2)
+      frame.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }]
+      frame.clipsContent = true
+
+      for (const node of selection) {
+        const clone = node.clone()
+        clone.x = node.x - frame.x
+        clone.y = node.y - frame.y
+        frame.appendChild(clone)
+      }
+
+      const bytes = await frame.exportAsync({
+        format: format || 'PNG',
+        ...(format !== 'SVG' && format !== 'PDF' ? { scale: scale || 2 } : {})
+      } as ExportSettings)
+      frame.remove()
+      return { data: figma.base64Encode(bytes) }
+    }
+
     // ==================== DELETE ====================
     case 'delete-node': {
       const { id } = args as { id: string }

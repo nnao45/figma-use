@@ -77,3 +77,7 @@ export { default as 'export-node' } from './export-node.ts'
 
 // Delete
 export { default as 'delete-node' } from './delete-node.ts'
+
+// Screenshot/Visual feedback
+export { default as 'screenshot' } from './screenshot.ts'
+export { default as 'export-selection' } from './export-selection.ts'
