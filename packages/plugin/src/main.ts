@@ -217,6 +217,11 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
           layout.frame.paddingBottom = layout.padding.bottom
           layout.frame.paddingLeft = layout.padding.left
         }
+        // Trigger layout recalculation for hug contents
+        const w = layout.frame.width
+        const h = layout.frame.height
+        layout.frame.resize(w + 0.01, h + 0.01)
+        layout.frame.resize(w || 1, h || 1)
       }
 
       for (const node of rootNodes) {
