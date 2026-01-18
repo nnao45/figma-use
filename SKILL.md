@@ -136,6 +136,13 @@ figma-use node resize <id> --width 300 --height 200
 figma-use node delete <id>
 ```
 
+### Import
+
+```bash
+figma-use import --svg '<svg width="100" height="100"><circle cx="50" cy="50" r="40" fill="red"/></svg>'
+figma-use import --svg "$(cat icon.svg)" --x 100 --y 200
+```
+
 ### Export
 
 ```bash
