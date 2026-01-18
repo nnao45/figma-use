@@ -39,14 +39,41 @@ const JSX_DEFINE = Object.fromEntries(
 
 /**
  * Transform JSX snippet to ES module using esbuild.
- * PascalCase components (Frame, Text, etc.) are converted to lowercase intrinsic elements.
+ * 
+ * Supports:
+ * - Pure JSX: `<Frame />`  
+ * - JSX with setup code: `const x = 1; <Frame style={{width: x}} />`
+ * - JSX with defineVars: `const colors = defineVars({...}); <Frame style={{backgroundColor: colors.primary}} />`
  */
 function transformJsxSnippet(code: string): string {
   const snippet = code.trim()
-  const isModule = snippet.includes('import ') || snippet.includes('export ')
   
-  // Wrap snippet in factory function, or use module as-is
-  const fullCode = isModule ? snippet : `export default (React) => () => (${snippet});`
+  // Full module with imports/exports — use as-is
+  if (snippet.includes('import ') || snippet.includes('export ')) {
+    return transformSync(snippet, {
+      loader: 'tsx',
+      jsx: 'transform',
+      jsxFactory: 'React.createElement',
+      jsxFragment: 'React.Fragment',
+      define: JSX_DEFINE,
+    }).code
+  }
+  
+  // Snippet mode: wrap in factory function
+  // Find where JSX starts (first < followed by uppercase letter)
+  const jsxStart = snippet.search(/<[A-Z]/)
+  const hasSetupCode = jsxStart > 0
+  const usesDefineVars = snippet.includes('defineVars')
+  
+  let fullCode: string
+  if (hasSetupCode) {
+    const setupPart = snippet.slice(0, jsxStart).trim()
+    const jsxPart = snippet.slice(jsxStart)
+    const params = usesDefineVars ? '(React, { defineVars })' : '(React)'
+    fullCode = `export default ${params} => { ${setupPart}; return () => (${jsxPart}); };`
+  } else {
+    fullCode = `export default (React) => () => (${snippet});`
+  }
   
   const result = transformSync(fullCode, {
     loader: 'tsx',
@@ -111,9 +138,10 @@ export default defineCommand({
       const exportName = args.export || 'default'
       let Component = module[exportName]
       
-      // If it's a factory (from stdin wrapper), call it with our React
-      if (typeof Component === 'function' && Component.length === 1 && args.stdin) {
-        Component = Component(React)
+      // If it's a factory (from stdin wrapper), call it with React and helpers
+      if (typeof Component === 'function' && (Component.length === 1 || Component.length === 2) && args.stdin) {
+        const { defineVars } = await import('../render/vars.ts')
+        Component = Component(React, { defineVars })
       }
       
       if (!Component) {
