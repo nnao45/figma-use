@@ -2,6 +2,10 @@
 
 **CLI for Figma.** LLMs already know React and work great with CLIs — this combines both.
 
+[![Demo](https://img.youtube.com/vi/9eSYVZRle7o/maxresdefault.jpg)](https://youtu.be/9eSYVZRle7o)
+
+Control Figma from your terminal. Create shapes, components, entire design systems — without clicking anything. In this video I connect Claude to Figma and let AI build a full button component set with 3 sizes in seconds. One command, done. Works with any AI coding assistant — Claude, GPT, Cursor, you name it.
+
 ```bash
 echo '<Frame style={{padding: 24, backgroundColor: "#3B82F6", borderRadius: 12}}>
   <Text style={{fontSize: 18, color: "#FFF"}}>Hello Figma</Text>
