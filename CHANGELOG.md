@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `--timeout` now applies to single commands (e.g., `eval`) via proxy `/command`
+- CLI now works after global install ([#1](https://github.com/dannote/figma-use/issues/1))
+- Move `kiwi-schema` to devDependencies (already bundled into dist)
 
 ## [0.6.0] - 2026-01-18
 
