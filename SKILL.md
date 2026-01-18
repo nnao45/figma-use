@@ -36,7 +36,7 @@ figma-use plugin
 
 ## JSX Rendering (Fastest Way)
 
-For complex layouts, use `render --stdin` with JSX. LLMs know React — no learning curve:
+For complex layouts, use `render --stdin` with pure JSX. No imports needed — elements are built-in:
 
 ```bash
 echo '<Frame style={{padding: 24, gap: 16, flexDirection: "column", backgroundColor: "#FFF", borderRadius: 12}}>
@@ -45,11 +45,34 @@ echo '<Frame style={{padding: 24, gap: 16, flexDirection: "column", backgroundCo
 </Frame>' | figma-use render --stdin
 ```
 
-**Style props:** `width`, `height`, `x`, `y`, `padding`, `paddingTop/Right/Bottom/Left`, `gap`, `flexDirection` (row|column), `justifyContent`, `alignItems`, `backgroundColor`, `borderColor`, `borderWidth`, `borderRadius`, `opacity`, `fontSize`, `fontFamily`, `fontWeight`, `color`, `textAlign`
-
 **Elements:** `Frame`, `Rectangle`, `Ellipse`, `Text`, `Line`, `Star`, `Polygon`, `Vector`, `Group`
 
-For reusable components and variants, see `figma-use render --examples`.
+**Style props:** `width`, `height`, `x`, `y`, `padding`, `paddingTop/Right/Bottom/Left`, `gap`, `flexDirection` (row|column), `justifyContent`, `alignItems`, `backgroundColor`, `borderColor`, `borderWidth`, `borderRadius`, `opacity`, `fontSize`, `fontFamily`, `fontWeight`, `color`, `textAlign`
+
+### Buttons Example (3 sizes)
+
+```bash
+echo '<Frame style={{gap: 16, flexDirection: "row", padding: 24}}>
+  <Frame name="Small" style={{paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6, backgroundColor: "#3B82F6", borderRadius: 6, flexDirection: "row", justifyContent: "center", alignItems: "center"}}>
+    <Text style={{fontSize: 12, color: "#FFF"}}>Button</Text>
+  </Frame>
+  <Frame name="Medium" style={{paddingLeft: 16, paddingRight: 16, paddingTop: 8, paddingBottom: 8, backgroundColor: "#3B82F6", borderRadius: 6, flexDirection: "row", justifyContent: "center", alignItems: "center"}}>
+    <Text style={{fontSize: 14, color: "#FFF"}}>Button</Text>
+  </Frame>
+  <Frame name="Large" style={{paddingLeft: 24, paddingRight: 24, paddingTop: 12, paddingBottom: 12, backgroundColor: "#3B82F6", borderRadius: 6, flexDirection: "row", justifyContent: "center", alignItems: "center"}}>
+    <Text style={{fontSize: 16, color: "#FFF"}}>Button</Text>
+  </Frame>
+</Frame>' | figma-use render --stdin
+```
+
+### Advanced: Components & Variants
+
+For `defineComponent`, `defineComponentSet`, `defineVars` — use files with imports:
+
+```bash
+figma-use render --examples  # Full API reference
+figma-use render ./MyComponent.figma.tsx
+```
 
 ---
 
