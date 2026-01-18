@@ -1,8 +1,8 @@
 import { defineCommand } from 'citty'
 import { resolve, dirname, join } from 'path'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
-import { execSync } from 'child_process'
 import consola from 'consola'
+import { getFigmaSettingsPath, isFigmaRunning } from './utils.ts'
 
 function getPackageRoot(): string {
   const currentFile = import.meta.path || import.meta.url.replace('file://', '')
@@ -21,42 +21,12 @@ function getPackageRoot(): string {
   return dirname(dirname(dirname(currentFile)))
 }
 
-function getFigmaSettingsPath(): string | null {
-  const home = process.env.HOME || process.env.USERPROFILE || ''
-  
-  if (process.platform === 'darwin') {
-    return join(home, 'Library', 'Application Support', 'Figma', 'settings.json')
-  } else if (process.platform === 'win32') {
-    const appData = process.env.APPDATA || join(home, 'AppData', 'Roaming')
-    return join(appData, 'Figma', 'settings.json')
-  } else {
-    return join(home, '.config', 'Figma', 'settings.json')
-  }
-}
-
-function isFigmaRunning(): boolean {
-  try {
-    if (process.platform === 'darwin') {
-      execSync('pgrep -x Figma', { stdio: 'pipe' })
-      return true
-    } else if (process.platform === 'win32') {
-      execSync('tasklist /FI "IMAGENAME eq Figma.exe" | find "Figma.exe"', { stdio: 'pipe' })
-      return true
-    } else {
-      execSync('pgrep -x figma', { stdio: 'pipe' })
-      return true
-    }
-  } catch {
-    return false
-  }
-}
-
 function getNextId(extensions: Array<{ id: number }>): number {
   if (!extensions || extensions.length === 0) return 1
   return Math.max(...extensions.map(e => e.id)) + 1
 }
 
-function installPlugin(manifestPath: string): { success: boolean; message: string } {
+function installPlugin(manifestPath: string, force = false): { success: boolean; message: string } {
   const settingsPath = getFigmaSettingsPath()
   
   if (!settingsPath || !existsSync(settingsPath)) {
@@ -66,11 +36,10 @@ function installPlugin(manifestPath: string): { success: boolean; message: strin
     }
   }
   
-  // Check if Figma is running
-  if (isFigmaRunning()) {
+  if (!force && isFigmaRunning()) {
     return {
       success: false,
-      message: 'Figma is running. Please quit Figma first, then run this command again.'
+      message: 'Figma is running. Quit Figma first or use --force'
     }
   }
   
@@ -160,17 +129,17 @@ function installPlugin(manifestPath: string): { success: boolean; message: strin
   }
 }
 
-function uninstallPlugin(manifestPath: string): { success: boolean; message: string } {
+function uninstallPlugin(manifestPath: string, force = false): { success: boolean; message: string } {
   const settingsPath = getFigmaSettingsPath()
   
   if (!settingsPath || !existsSync(settingsPath)) {
     return { success: false, message: 'Figma settings not found' }
   }
   
-  if (isFigmaRunning()) {
+  if (!force && isFigmaRunning()) {
     return {
       success: false,
-      message: 'Figma is running. Please quit Figma first.'
+      message: 'Figma is running. Quit Figma first or use --force'
     }
   }
   
@@ -222,7 +191,7 @@ export default defineCommand({
     }
     
     if (args.uninstall) {
-      const result = uninstallPlugin(pluginPath)
+      const result = uninstallPlugin(pluginPath, args.force)
       if (result.success) {
         consola.success(result.message)
       } else {
@@ -231,15 +200,7 @@ export default defineCommand({
       return
     }
     
-    // Check if Figma is running (unless force)
-    if (!args.force && isFigmaRunning()) {
-      consola.error('Figma is running')
-      consola.info('Please quit Figma, then run: figma-use plugin')
-      consola.info('Or use --force to install anyway (changes will apply on restart)')
-      return
-    }
-    
-    const result = installPlugin(pluginPath)
+    const result = installPlugin(pluginPath, args.force)
     
     if (result.success) {
       consola.success(result.message)

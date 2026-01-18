@@ -49,7 +49,7 @@ The `render` command takes this JSX and creates real Figma nodes — frames, tex
 ```bash
 bun install -g @dannote/figma-use
 
-figma-use plugin     # Install Figma plugin (quit Figma first)
+figma-use plugin install  # Install plugin (quit Figma first)
 figma-use proxy      # Start proxy server
 ```
 

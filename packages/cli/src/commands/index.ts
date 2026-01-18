@@ -1,7 +1,7 @@
 // Top-level commands
 export { default as status } from './status.ts'
 export { default as proxy } from './proxy.ts'
-export { default as plugin } from './plugin.ts'
+export { default as plugin } from './plugin/index.ts'
 export { default as profile } from './profile.ts'
 export { default as render } from './render.ts'
 export { default as eval } from './eval.ts'

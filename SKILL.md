@@ -29,7 +29,7 @@ figma --remote-debugging-port=9222
 If plugin not installed:
 ```bash
 # Quit Figma first, then:
-figma-use plugin
+figma-use plugin install
 ```
 
 ---

@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `file info` — get file key and name
 - `me` — get current user info
 - `font list` — list available fonts with optional family filter
+- `plugin list` — list installed development plugins
+- `plugin` is now a subcommand group: `plugin install|uninstall|list|path`
 
 ## [0.5.4] - 2026-01-18
 
