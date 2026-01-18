@@ -129,6 +129,13 @@ figma-use export selection --output selection.png
 figma-use page list
 figma-use page set "Page Name"
 figma-use viewport zoom-to-fit <ids...>
+figma-use viewport get
+figma-use viewport set --x 100 --y 200 --zoom 1.5
+```
+
+**Always zoom after creating elements** — otherwise the user won't see what you made:
+```bash
+figma-use viewport zoom-to-fit <created-node-id>
 ```
 
 ### Variables & Styles
