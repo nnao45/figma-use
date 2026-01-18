@@ -258,7 +258,9 @@ figma-use group ungroup <id>
 figma-use group flatten "1:2,1:3"
 ```
 
-### Render React Components
+### Render React Components (Experimental)
+
+> ⚠️ **Experimental**: The React render feature uses Figma's internal multiplayer protocol, which is undocumented and may change without notice. Use for prototyping and automation, not production workflows.
 
 Render TSX/JSX components directly to Figma via WebSocket (bypasses plugin API for ~100x speed):
 
@@ -444,9 +446,11 @@ Workflow:
 
 MIT
 
-### Variable Bindings (StyleX-inspired)
+### Variable Bindings (Experimental)
 
-Bind Figma variables to colors in your components:
+> ⚠️ **Experimental**: Variable binding uses reverse-engineered protocol. Only `backgroundColor` binding is currently supported.
+
+Bind Figma variables to colors using human-readable names:
 
 ```tsx
 // tokens.figma.ts
