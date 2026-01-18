@@ -1,364 +1,140 @@
 # figma-use
 
-Control Figma from the command line. Built for AI agents to create and manipulate designs programmatically.
+**CLI for Figma.** LLMs already know React and work great with CLIs — this combines both.
 
-Inspired by [agent-browser](https://github.com/vercel-labs/agent-browser) (browser automation) and [bird](https://github.com/steipete/bird) (Twitter CLI) — fast CLIs that save tokens and give agents direct control.
-
-## Why not the official Figma MCP?
-
-The [official Figma MCP server](https://developers.figma.com/docs/figma-mcp-server/) is focused on **design-to-code** — extracting structure and variables for code generation. It cannot create or modify designs.
-
-| Feature | Official MCP | figma-use |
-|---------|-------------|-----------|
-| Read node properties | ✓ | ✓ |
-| Take screenshots | ✓ | ✓ |
-| Extract variables | ✓ | ✓ |
-| **Create shapes** | ✗ | ✓ |
-| **Create text** | ✗ | ✓ |
-| **Create frames & components** | ✗ | ✓ |
-| **Modify properties** | ✗ | ✓ |
-| **Set fills, strokes, effects** | ✗ | ✓ |
-| **Auto-layout** | ✗ | ✓ |
-| **Create/modify variables** | ✗ | ✓ |
-| **Execute arbitrary code** | ✗ | ✓ |
-
-figma-use gives AI agents **full read/write control** over Figma.
-
-## How it works
-
-```
-┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
-│                 │      │                 │      │                 │
-│   AI Agent /    │─────▶│   figma-use     │─────▶│     Figma       │
-│   CLI           │ HTTP │   proxy         │  WS  │     Plugin      │
-│                 │◀─────│   :38451        │◀─────│                 │
-│                 │      │                 │      │                 │
-└─────────────────┘      └────────┬────────┘      └─────────────────┘
-                                  │
-                                  │ WebSocket (persistent)
-                                  ▼
-                         ┌─────────────────┐
-                         │     Figma       │
-                         │   Multiplayer   │
-                         │     Server      │
-                         └─────────────────┘
+```bash
+echo '<Frame style={{padding: 24, backgroundColor: "#3B82F6", borderRadius: 12}}>
+  <Text style={{fontSize: 18, color: "#FFF"}}>Hello Figma</Text>
+</Frame>' | figma-use render --stdin
 ```
 
-Two communication paths:
-- **Plugin API** — most commands go through the Figma plugin for full API access
-- **Multiplayer WebSocket** — the `render` command writes directly to Figma's multiplayer server for ~100x faster node creation
+No JSON schemas, no MCP protocol overhead — just JSX that any LLM can write.
 
-The proxy maintains persistent connections for fast repeated operations.
+## Why CLI over MCP?
+
+MCP servers exchange verbose JSON. CLIs are **token-efficient**:
+
+```bash
+# 47 tokens
+figma-use create frame --width 400 --height 300 --fill "#FFF" --radius 12 --layout VERTICAL --gap 16
+```
+
+vs MCP JSON request + response: **~200 tokens** for the same operation.
+
+For AI agents doing dozens of Figma operations, this adds up fast.
+
+## Why JSX?
+
+Every LLM has been trained on millions of React components. They can write this without examples:
+
+```tsx
+<Frame style={{ flexDirection: 'column', gap: 16, padding: 24 }}>
+  <Text style={{ fontSize: 24, fontWeight: 'bold' }}>Title</Text>
+  <Text style={{ fontSize: 14, color: '#666' }}>Description</Text>
+</Frame>
+```
+
+The `render` command takes this JSX and creates real Figma nodes — frames, text, components, auto-layout, the works.
 
 ## Installation
 
 ```bash
 bun install -g @dannote/figma-use
+
+figma-use plugin     # Install Figma plugin (quit Figma first)
+figma-use proxy      # Start proxy server
 ```
 
-## Quick Start
+Open Figma → Plugins → Development → **Figma Use**
 
-### 1. Start the proxy server
+## Render: JSX → Figma (Experimental)
+
+> ⚠️ Uses Figma's internal multiplayer protocol — ~100x faster than plugin API, but may break if Figma changes it.
+
+### Setup
 
 ```bash
+# Terminal 1: Start Figma with debug port
+figma --remote-debugging-port=9222
+
+# Terminal 2: Start proxy
 figma-use proxy
 ```
 
-### 2. Install the Figma plugin
+### Basic Usage
 
 ```bash
-# Quit Figma first, then:
-figma-use plugin
+# From stdin
+echo '<Frame style={{width: 200, height: 100, backgroundColor: "#FF0000"}} />' | figma-use render --stdin
 
-# Or with options:
-figma-use plugin --force      # Force install while Figma is running
-figma-use plugin --path       # Show plugin path only
-figma-use plugin --uninstall  # Uninstall
-```
-
-Start Figma and find the plugin in **Plugins → Development → Figma Use**.
-
-### 3. Run commands
-
-```bash
-# Create a styled button
-figma-use create frame --x 0 --y 0 --width 200 --height 48 \
-  --fill "#3B82F6" --radius 8 \
-  --layout HORIZONTAL --gap 8 --padding "12,24,12,24" \
-  --name "Button"
-
-# Add text
-figma-use create text --x 0 --y 0 --text "Click me" \
-  --fontSize 16 --fontFamily "Inter" --fontStyle "Medium" --fill "#FFFFFF" \
-  --parent "1:23"
-
-# Export to PNG
-figma-use export node "1:23" --format PNG --scale 2 --output button.png
-```
-
-All create commands support inline styling — no need for separate `set` calls.
-
-## Commands
-
-### Node Operations
-
-```bash
-figma-use node get <id>                    # Get node properties
-figma-use node tree [id]                   # Get formatted tree (default: current page)
-figma-use node tree --depth 2              # Limit tree depth (also limits node count check)
-figma-use node tree -i                     # Only interactive elements
-figma-use node tree --force                # Skip 500 node limit
-figma-use node children <id>               # Get child nodes
-figma-use node delete <id>                 # Delete node
-figma-use node clone <id>                  # Clone node
-figma-use node rename <id> <name>          # Rename node
-figma-use node move <id> --x <x> --y <y>   # Move node
-figma-use node resize <id> --width <w> --height <h>
-```
-
-The `tree` command outputs a human-readable hierarchy:
-
-```
-[0] frame "Card" (1:23)
-    400×300 at (0, 0) | fill: #FFFFFF | layout: col gap=16
-  [0] text "Title" (1:24)
-      200×32 at (24, 24) | fill: #000000 | "Hello World" | font: 24px Inter Bold
-  [1] frame "Content" (1:25)
-      352×200 at (24, 72) | fill: #F5F5F5 | radius: 8
-```
-
-### Create Shapes
-
-```bash
-figma-use create rect --x 0 --y 0 --width 100 --height 50 [--fill --stroke --radius]
-figma-use create ellipse --x 0 --y 0 --width 100 --height 100 [--fill]
-figma-use create line --x 0 --y 0 --length 100 [--stroke]
-figma-use create polygon --x 0 --y 0 --size 60 --sides 6 [--fill]
-figma-use create star --x 0 --y 0 --size 60 --points 5 [--fill]
-figma-use create vector --x 0 --y 0 --path "M0,0 L100,100"
-```
-
-### Create Containers
-
-```bash
-figma-use create frame --x 0 --y 0 --width 400 --height 300 \
-  [--fill --radius --layout HORIZONTAL --gap 12 --padding "16,16,16,16"]
-figma-use create component --x 0 --y 0 --width 200 --height 100
-figma-use create instance --component <id> --x 100 --y 100
-figma-use create section --x 0 --y 0 --width 800 --height 600 --name "Hero"
-figma-use create page "Page Name"
-```
-
-### Create Text
-
-```bash
-figma-use create text --x 0 --y 0 --text "Hello" \
-  [--fontSize 24 --fontFamily "Inter" --fontStyle "Bold" --fill "#000"]
-```
-
-### Set Properties
-
-```bash
-figma-use set fill <id> "#FF0000"
-figma-use set stroke <id> "#000" [--weight 2]
-figma-use set radius <id> --radius 12
-figma-use set radius <id> --topLeft 16 --bottomRight 16
-figma-use set opacity <id> 0.5
-figma-use set rotation <id> 45
-figma-use set visible <id> false
-figma-use set text <id> "New text"
-figma-use set font <id> --family "Inter" --style "Bold" --size 20
-figma-use set effect <id> --type DROP_SHADOW --radius 10 --offsetY 4 --color "#00000040"
-figma-use set layout <id> --mode VERTICAL --gap 12 --padding 16
-figma-use set blend <id> MULTIPLY
-figma-use set constraints <id> --horizontal CENTER --vertical MAX
-figma-use set image <id> image.png [--mode FILL]
-```
-
-### Variables (Design Tokens)
-
-```bash
-figma-use variable list [--type COLOR|FLOAT|STRING|BOOLEAN]
-figma-use variable get <id>
-figma-use variable create "Primary" --collection <id> --type COLOR --value "#FF0000"
-figma-use variable set <id> --mode <modeId> --value "#00FF00"
-figma-use variable delete <id>
-figma-use variable bind --node <nodeId> --field fills --variable <varId>
-
-figma-use collection list
-figma-use collection get <id>
-figma-use collection create "Colors"
-figma-use collection delete <id>
-```
-
-### Styles
-
-```bash
-figma-use style list
-figma-use style create-paint "Brand/Primary" --color "#E11D48"
-figma-use style create-text "Heading/H1" --family "Inter" --style "Bold" --size 32
-figma-use style create-effect "Shadow/Medium" --type DROP_SHADOW --radius 8 --offsetY 4
-```
-
-### Export
-
-```bash
-figma-use export node <id> [--format PNG|SVG|PDF] [--scale 2] [--output file.png]
-figma-use export selection [--format PNG] [--scale 2] [--output file.png]
-figma-use export screenshot [--output viewport.png]
-```
-
-Export commands have built-in guards against oversized exports (max 4096px dimension, 16MP total). Override with `--force`:
-
-```bash
-figma-use export node <id> --scale 10 --force
-```
-
-Heavy operations support `--timeout` (seconds):
-```bash
-figma-use export node <id> --scale 2 --output large.png --timeout 300
-```
-
-### Selection & Navigation
-
-```bash
-figma-use selection get
-figma-use selection set "1:2,1:3,1:4"
-
-figma-use page list
-figma-use page set <id|name>
-
-figma-use viewport get
-figma-use viewport set --x 100 --y 200 --zoom 0.5
-figma-use viewport zoom-to-fit <ids...>
-```
-
-### Find & Query
-
-```bash
-figma-use find --name "Button"
-figma-use find --name "Icon" --type FRAME
-figma-use find --type INSTANCE --limit 50   # Limit results (default: 100)
-figma-use get pages
-figma-use get components --name "Button"    # Filter by name
-figma-use get components --limit 50         # Limit results (default: 50)
-figma-use get styles
-```
-
-### Boolean & Group
-
-```bash
-figma-use boolean union "1:2,1:3"
-figma-use boolean subtract "1:2,1:3"
-figma-use boolean intersect "1:2,1:3"
-figma-use boolean exclude "1:2,1:3"
-
-figma-use group create "1:2,1:3"
-figma-use group ungroup <id>
-figma-use group flatten "1:2,1:3"
-```
-
-### Render React Components (Experimental)
-
-> ⚠️ **Experimental**: The React render feature uses Figma's internal multiplayer protocol, which is undocumented and may change without notice. Use for prototyping and automation, not production workflows.
-
-Render TSX/JSX components directly to Figma via WebSocket (bypasses plugin API for ~100x speed):
-
-```bash
 # From file
 figma-use render ./Card.figma.tsx
 
 # With props
-figma-use render ./Card.figma.tsx --props '{"title": "Hello", "items": ["A", "B"]}'
-
-# JSX snippet from stdin
-echo '<Frame style={{width: 200, height: 100, backgroundColor: "#FF0000"}} />' | figma-use render --stdin
-
-# Nested elements
-echo '<Frame style={{padding: 20, gap: 10}}>
-  <Text style={{fontSize: 24}}>Title</Text>
-  <Rectangle style={{width: 100, height: 50, backgroundColor: "#3B82F6"}} />
-</Frame>' | figma-use render --stdin
-
-# Full component from stdin (with imports/exports)
-cat component.tsx | figma-use render --stdin
-
-# Into specific parent
-figma-use render ./Card.figma.tsx --parent "1:23"
-
-# Dry run (output NodeChanges JSON without sending)
-figma-use render ./Card.figma.tsx --dryRun
+figma-use render ./Card.figma.tsx --props '{"title": "Hello"}'
 ```
 
-**Important:** The `render` command requires:
-1. Figma running with remote debugging: `figma --remote-debugging-port=9222`
-2. Proxy server running: `figma-use proxy`
+### Supported Elements
 
-The proxy maintains persistent WebSocket connections for fast repeated renders:
-- First render: ~4s (establishes connection)
-- Subsequent renders: ~0.4s (reuses connection)
+`Frame`, `Rectangle`, `Ellipse`, `Text`, `Line`, `Star`, `Polygon`, `Vector`, `Group`
 
-Example component (`Card.figma.tsx`):
+### Style Properties
 
 ```tsx
-import * as React from 'react'
-import { Frame, Text, Rectangle } from '@dannote/figma-use/components'
+// Layout
+flexDirection: 'row' | 'column'
+justifyContent: 'flex-start' | 'center' | 'flex-end' | 'space-evenly'
+alignItems: 'flex-start' | 'center' | 'flex-end' | 'stretch'
+gap: number
+padding: number
+paddingTop / paddingRight / paddingBottom / paddingLeft: number
 
-interface CardProps {
-  title: string
-  items: string[]
-}
+// Size & Position
+width: number
+height: number
+x: number
+y: number
 
-export default function Card({ title, items }: CardProps) {
-  return (
-    <Frame name="Card" style={{
-      width: 300,
-      flexDirection: 'column',
-      padding: 24,
-      gap: 16,
-      backgroundColor: '#FFFFFF',
-      borderRadius: 12,
-    }}>
-      <Text name="Title" style={{ fontSize: 24, fontWeight: 'bold', color: '#000' }}>
-        {title}
-      </Text>
-      <Frame name="Items" style={{ flexDirection: 'column', gap: 8 }}>
-        {items.map((item, i) => (
-          <Text key={i} style={{ fontSize: 16, color: '#666' }}>{item}</Text>
-        ))}
-      </Frame>
-    </Frame>
-  )
-}
+// Appearance
+backgroundColor: string  // hex color
+borderColor: string
+borderWidth: number
+borderRadius: number
+opacity: number
+
+// Text
+fontSize: number
+fontFamily: string
+fontWeight: 'normal' | 'bold' | '100'-'900'
+color: string
+textAlign: 'left' | 'center' | 'right'
 ```
 
-Available elements: `Frame`, `Rectangle`, `Ellipse`, `Text`, `Line`, `Star`, `Polygon`, `Vector`, `Component`, `Instance`, `Group`, `Page`, `View`
+### Reusable Components
 
-#### Reusable Components
-
-Create Figma components that can be instantiated multiple times:
+`defineComponent` creates a Figma Component. First usage renders the master, subsequent usages create Instances:
 
 ```tsx
 import { defineComponent, Frame, Text } from '@dannote/figma-use/render'
 
-const Button = defineComponent('Button',
-  <Frame style={{ padding: 12, backgroundColor: '#3B82F6', borderRadius: 8 }}>
-    <Text style={{ color: '#FFF' }}>Click me</Text>
+const Card = defineComponent('Card',
+  <Frame style={{ padding: 24, backgroundColor: '#FFF', borderRadius: 12 }}>
+    <Text style={{ fontSize: 18, color: '#000' }}>Card</Text>
   </Frame>
 )
 
 export default () => (
-  <Frame style={{ gap: 16, flexDirection: 'column' }}>
-    <Button />  {/* Creates Component */}
-    <Button />  {/* Creates Instance */}
-    <Button />  {/* Creates Instance */}
+  <Frame style={{ gap: 16, flexDirection: 'row' }}>
+    <Card />  {/* Creates Component */}
+    <Card />  {/* Creates Instance */}
+    <Card />  {/* Creates Instance */}
   </Frame>
 )
 ```
 
-#### Component Variants (ComponentSet)
+### Component Variants
 
-Create components with variants like in Figma's native UI:
+`defineComponentSet` creates a Figma ComponentSet with all variant combinations:
 
 ```tsx
 import { defineComponentSet, Frame, Text } from '@dannote/figma-use/render'
@@ -386,146 +162,159 @@ export default () => (
 )
 ```
 
-This creates a real Figma ComponentSet with all variant combinations (Primary/Small, Primary/Large, Secondary/Small, Secondary/Large).
+This creates 4 variant components (Primary/Small, Primary/Large, Secondary/Small, Secondary/Large) inside a ComponentSet, plus instances with the requested variants.
 
-### Advanced
+### Variable Bindings
+
+Bind colors to Figma variables by name:
+
+```tsx
+import { defineVars, Frame, Text } from '@dannote/figma-use/render'
+
+const colors = defineVars({
+  bg: { name: 'Colors/Gray/50', value: '#F8FAFC' },
+  text: { name: 'Colors/Gray/900', value: '#0F172A' },
+})
+
+export default () => (
+  <Frame style={{ backgroundColor: colors.bg }}>
+    <Text style={{ color: colors.text }}>Bound to variables</Text>
+  </Frame>
+)
+```
+
+The `value` is a fallback. At render time, colors get bound to actual Figma variables by name.
+
+---
+
+## CLI Commands
+
+The `render` command is the fastest way to create complex layouts. For simpler operations or modifications, use direct commands:
+
+### Create
 
 ```bash
-# Execute arbitrary JavaScript in Figma
+figma-use create frame --width 400 --height 300 --fill "#FFF" --radius 12 --layout VERTICAL --gap 16
+figma-use create rect --width 100 --height 50 --fill "#FF0000" --radius 8
+figma-use create ellipse --width 80 --height 80 --fill "#00FF00"
+figma-use create text --text "Hello" --fontSize 24 --fill "#000"
+figma-use create line --length 100 --stroke "#000"
+figma-use create component --width 200 --height 100
+figma-use create instance --component <id>
+```
+
+### Modify
+
+```bash
+figma-use set fill <id> "#FF0000"
+figma-use set stroke <id> "#000" --weight 2
+figma-use set radius <id> 12
+figma-use set opacity <id> 0.5
+figma-use set text <id> "New text"
+figma-use set font <id> --family "Inter" --style "Bold" --size 20
+figma-use set layout <id> --mode VERTICAL --gap 12 --padding 16
+figma-use set effect <id> --type DROP_SHADOW --radius 10 --color "#00000040"
+```
+
+### Query
+
+```bash
+figma-use node get <id>              # Get node properties
+figma-use node tree                  # Page structure as readable tree
+figma-use node children <id>         # List children
+figma-use find --name "Button"       # Find by name
+figma-use find --type FRAME          # Find by type
+figma-use selection get              # Current selection
+```
+
+### Export
+
+```bash
+figma-use export node <id> --output design.png
+figma-use export screenshot --output viewport.png
+figma-use export selection --output selection.png
+```
+
+### Navigate
+
+```bash
+figma-use page list
+figma-use page set "Page Name"
+figma-use viewport zoom-to-fit <ids...>
+```
+
+### Variables & Styles
+
+```bash
+figma-use variable list
+figma-use variable create "Primary" --collection <id> --type COLOR --value "#3B82F6"
+figma-use style list
+figma-use style create-paint "Brand/Primary" --color "#E11D48"
+```
+
+### Escape Hatch
+
+```bash
 figma-use eval "return figma.currentPage.name"
-figma-use eval "const r = figma.createRectangle(); r.resize(100, 100); return r.id"
-figma-use eval "await figma.loadFontAsync({family: 'Inter', style: 'Bold'})"
-
-# Import SVG
-figma-use import --svg "<svg>...</svg>" --x 0 --y 0
+figma-use eval "figma.createRectangle().resize(100, 100)"
 ```
 
-### Performance Profiling
+---
 
-Profile any command using Chrome DevTools Protocol:
-
-```bash
-# Start Figma with debug port
-/Applications/Figma.app/Contents/MacOS/Figma --remote-debugging-port=9222
-
-# Profile a command
-figma-use profile "get components --limit 20"
-figma-use profile "node tree --depth 2"
-figma-use profile "find --type INSTANCE"
-```
-
-Output shows time breakdown (Figma WASM vs JS vs GC) and top functions by CPU time.
-
-## Output Format
+## Output
 
 Human-readable by default:
 
-```bash
-$ figma-use create rect --x 0 --y 0 --width 100 --height 50 --fill "#FF0000"
-✓ Created rect "Rectangle"
-  id: 1:23
-  box: 100x50 at (0, 0)
-  fill: #FF0000
-
-$ figma-use node children "1:2"
-[0] frame "Header" (1:3)
-    box: 1200x80 at (0, 0)
-    fill: #FFFFFF
-
-[1] text "Title" (1:4)
-    box: 200x32 at (20, 24)
-    font: 24px
+```
+$ figma-use node tree
+[0] frame "Card" (1:23)
+    400×300 at (0, 0) | fill: #FFFFFF | layout: col gap=16
+  [0] text "Title" (1:24)
+      "Hello World" | 24px Inter Bold
 ```
 
-Add `--json` for machine-readable output:
+Add `--json` for machine parsing:
 
 ```bash
-$ figma-use node get "1:2" --json
-{
-  "id": "1:2",
-  "name": "Frame",
-  "type": "FRAME",
-  ...
-}
+figma-use node get <id> --json
 ```
-
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | 38451 | Proxy server port |
-| `FIGMA_PROXY_URL` | `http://localhost:38451` | Proxy URL for CLI |
 
 ## For AI Agents
 
-figma-use is designed to work with AI coding agents like [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Cursor](https://cursor.sh), or any agent that can execute shell commands.
-
-### Using with Claude Code
-
-Copy the included skill to teach your agent how to use figma-use:
+Copy the skill file to your agent's skills directory:
 
 ```bash
-# From npm package
-mkdir -p ~/.claude/skills/figma-use
 cp node_modules/@dannote/figma-use/SKILL.md ~/.claude/skills/figma-use/
-
-# Or download directly
-curl -o ~/.claude/skills/figma-use/SKILL.md \
-  https://raw.githubusercontent.com/dannote/figma-use/main/SKILL.md
 ```
 
-Then just ask:
-
-```
-Create a card component with an avatar, title, and description in Figma
-```
-
-### Minimal Setup
-
-For agents that don't support skills, add to your project's `CLAUDE.md` or `AGENTS.md`:
+Or add to your project's `AGENTS.md`:
 
 ```markdown
-## Figma Automation
+## Figma
 
-Use `figma-use` for Figma control. Run `figma-use --help` for commands.
-
-Workflow:
-1. `figma-use status` - Check plugin connection
-2. `figma-use create frame --x 0 --y 0 --width 400 --height 300 --fill "#FFF" --name "Card"`
-3. `figma-use create text --x 20 --y 20 --text "Title" --fontSize 24 --fill "#000" --parent "1:2"`
-4. `figma-use export screenshot --output preview.png` - Verify result
+Use `figma-use` CLI. For complex layouts, use `figma-use render --stdin` with JSX.
+Run `figma-use --help` for all commands.
 ```
+
+## How It Works
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  AI Agent   │────▶│  figma-use  │────▶│   Plugin    │
+│             │ CLI │    proxy    │ WS  │             │
+└─────────────┘     └──────┬──────┘     └─────────────┘
+                           │
+                           │ WebSocket (multiplayer)
+                           ▼
+                    ┌─────────────┐
+                    │   Figma     │
+                    │   Server    │
+                    └─────────────┘
+```
+
+- **CLI commands** → Plugin API (full Figma access)
+- **render command** → Multiplayer protocol (~100x faster, experimental)
 
 ## License
 
 MIT
-
-### Variable Bindings (Experimental)
-
-> ⚠️ **Experimental**: Variable binding uses reverse-engineered protocol. Supports `backgroundColor`, `borderColor`, and text `color`.
-
-Bind Figma variables to colors using human-readable names:
-
-```tsx
-// tokens.figma.ts
-import { defineVars } from '@dannote/figma-use'
-
-export const colors = defineVars({
-  primary: { name: 'Colors/Gray/50', value: '#F8FAFC' },
-  accent: { name: 'Colors/Blue/500', value: '#3B82F6' },
-  text: { name: 'Colors/Gray/900', value: '#0F172A' },
-})
-
-// Card.figma.tsx
-import { colors } from './tokens.figma'
-
-export function Card({ title }: { title: string }) {
-  return (
-    <Frame style={{ backgroundColor: colors.primary }}>
-      <Text style={{ color: colors.text }}>{title}</Text>
-    </Frame>
-  )
-}
-```
-
-The `value` field provides a fallback color for display. Variables are bound at the protocol level — no plugin API calls needed.
