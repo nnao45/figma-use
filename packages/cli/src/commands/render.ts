@@ -86,11 +86,64 @@ function transformJsxSnippet(code: string): string {
   return result.code
 }
 
+const HELP = `
+Render JSX to Figma (~100x faster than plugin API).
+
+EXAMPLES
+
+  # From stdin
+  echo '<Frame style={{padding: 24, backgroundColor: "#3B82F6"}}>
+    <Text style={{fontSize: 18, color: "#FFF"}}>Hello</Text>
+  </Frame>' | figma-use render --stdin
+
+  # From file
+  figma-use render ./Card.figma.tsx
+  figma-use render ./Card.figma.tsx --props '{"title": "Hello"}'
+
+COMPONENTS
+
+  # defineComponent — first usage creates Component, rest create Instances
+  const Card = defineComponent('Card', <Frame>...</Frame>)
+  <Card /><Card /><Card />
+
+  # defineComponentSet — creates Figma ComponentSet with all variants
+  const Button = defineComponentSet('Button', {
+    variant: ['Primary', 'Secondary'] as const,
+    size: ['Small', 'Large'] as const,
+  }, ({ variant, size }) => <Frame>...</Frame>)
+  <Button variant="Primary" size="Large" />
+
+VARIABLE BINDINGS
+
+  const colors = defineVars({
+    primary: { name: 'Colors/Blue/500', value: '#3B82F6' },
+  })
+  <Frame style={{ backgroundColor: colors.primary }} />
+
+ELEMENTS
+
+  Frame, Rectangle, Ellipse, Text, Line, Star, Polygon, Vector, Group
+
+STYLE PROPS
+
+  Layout:     flexDirection, justifyContent, alignItems, gap, padding
+  Size:       width, height, x, y  
+  Appearance: backgroundColor, borderColor, borderWidth, borderRadius, opacity
+  Text:       fontSize, fontFamily, fontWeight, color, textAlign
+
+SETUP
+
+  1. Start Figma: figma --remote-debugging-port=9222
+  2. Start proxy: figma-use proxy
+  3. Open plugin: Plugins → Development → Figma Use
+`
+
 export default defineCommand({
   meta: { 
-    description: 'Render React component to Figma via WebSocket',
+    description: 'Render JSX to Figma. Use --examples for API reference.',
   },
   args: {
+    examples: { type: 'boolean', description: 'Show examples and API reference' },
     file: { type: 'positional', description: 'TSX/JSX file path', required: false },
     stdin: { type: 'boolean', description: 'Read TSX from stdin' },
     props: { type: 'string', description: 'JSON props to pass to component' },
@@ -100,6 +153,11 @@ export default defineCommand({
     dryRun: { type: 'boolean', description: 'Output NodeChanges without sending to Figma' },
   },
   async run({ args }) {
+    if (args.examples) {
+      console.log(HELP)
+      return
+    }
+    
     let filePath: string
     let tempFile: string | null = null
     

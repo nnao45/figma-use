@@ -4,8 +4,8 @@ import * as commands from './commands/index.ts'
 const main = defineCommand({
   meta: {
     name: 'figma-use',
-    description: 'Control Figma from the command line',
-    version: '0.2.0'
+    description: 'Control Figma from the command line. Supports JSX rendering with components and variants — see `figma-use render --help`',
+    version: '0.5.0'
   },
   subCommands: commands
 })
