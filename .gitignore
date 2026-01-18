@@ -5,3 +5,4 @@ dist
 packages/plugin/dist
 FIGMA_INTERNALS.md
 FIGMA_INTERNALS.md
+.figma-render-*.js
