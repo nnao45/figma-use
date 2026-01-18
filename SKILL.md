@@ -217,3 +217,86 @@ Hex format: `#RGB`, `#RRGGBB`, `#RRGGBBAA`
 ## Node IDs
 
 Format: `sessionID:localID` (e.g., `1:2`, `45:123`). Get from `figma-use selection get` or `figma-use node tree`.
+
+---
+
+## Best Practices
+
+### Always Verify Visually
+
+After any operation, export a screenshot to confirm the result:
+
+```bash
+figma-use export node <id> --scale 0.5 --output /tmp/check.png  # Overview
+figma-use export node <id> --scale 2 --output /tmp/detail.png   # Details
+```
+
+### Copying Elements Between Pages
+
+`node clone` creates a copy in the same parent. To move to another page:
+
+```bash
+figma-use node clone <source-id> --json | jq -r '.id'  # Get new ID
+figma-use node set-parent <new-id> --parent <target-page-or-frame-id>
+figma-use node move <new-id> --x 50 --y 50  # Reposition (coordinates reset)
+```
+
+### Working with Sections
+
+Sections organize components on a page. Elements must be explicitly moved inside:
+
+```bash
+figma-use create section --name "Buttons" --x 0 --y 0 --width 600 --height 200
+figma-use node set-parent <component-id> --parent <section-id>
+figma-use node move <component-id> --x 50 --y 50  # Position inside section
+```
+
+⚠️ **Deleting a section deletes all children inside it!**
+
+### Building a Component from Existing Design
+
+```bash
+# 1. Find and copy the element
+figma-use find --name "Button"
+figma-use node clone <id> --json | jq -r '.id'
+
+# 2. Move to components page/section
+figma-use node set-parent <new-id> --parent <section-id>
+figma-use node move <new-id> --x 50 --y 50
+
+# 3. Rename with proper naming convention
+figma-use node rename <new-id> "Button/Primary"
+
+# 4. Convert to component
+figma-use node to-component <new-id>
+
+# 5. Verify
+figma-use export node <section-id> --scale 0.5 --output /tmp/check.png
+```
+
+### Replacing Frames with Component Instances
+
+When copying a composite element (like a dialog), nested elements are frames, not instances. To use existing components:
+
+```bash
+# Delete the frame
+figma-use node delete <frame-id>
+
+# Create instance of the component
+figma-use create instance --component <component-id> --x 50 --y 50 --parent <parent-id>
+```
+
+### Instance Element IDs
+
+Elements inside instances have composite IDs: `I<instance-id>;<internal-id>`
+
+```bash
+figma-use set text "I123:456;789:10" "New text"  # Modify text inside instance
+```
+
+### Finding Elements by Properties
+
+```bash
+figma-use find --type FRAME 2>&1 | grep "stroke: #EF4444"  # Red border
+figma-use find --type TEXT 2>&1 | grep "Bold"              # Bold text
+```
