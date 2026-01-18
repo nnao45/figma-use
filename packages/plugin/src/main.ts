@@ -681,8 +681,14 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
     case 'resize-node': {
       const { id, width, height } = args as { id: string; width: number; height: number }
       const node = await figma.getNodeByIdAsync(id) as SceneNode | null
-      if (!node || !('resize' in node)) throw new Error('Node not found')
-      node.resize(width, height)
+      if (!node) throw new Error('Node not found')
+      if ('resize' in node) {
+        node.resize(width, height)
+      } else if ('width' in node && 'height' in node) {
+        (node as SectionNode).resizeWithoutConstraints(width, height)
+      } else {
+        throw new Error('Node cannot be resized')
+      }
       return serializeNode(node)
     }
 
