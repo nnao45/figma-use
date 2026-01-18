@@ -3,9 +3,15 @@
  * 
  * @example
  * ```tsx
- * // tokens.figma.ts
+ * // tokens.figma.ts - with explicit values (recommended)
  * export const colors = defineVars({
- *   primary: 'Colors/Gray/50',      // by name (recommended)
+ *   primary: { name: 'Colors/Gray/50', value: '#F8FAFC' },
+ *   accent: { name: 'Colors/Blue/500', value: '#3B82F6' },
+ * })
+ * 
+ * // tokens.figma.ts - name only (value loaded from Figma)
+ * export const colors = defineVars({
+ *   primary: 'Colors/Gray/50',
  *   accent: 'Colors/Blue/500',
  * })
  * 
@@ -14,11 +20,17 @@
  * ```
  */
 
+import { parseColor } from '../color.ts'
+
 const VAR_SYMBOL = Symbol.for('figma.variable')
+
+/** Variable definition - either string name or object with name and value */
+export type VarDef = string | { name: string; value: string }
 
 export interface FigmaVariable {
   [VAR_SYMBOL]: true
   name: string              // Variable name like "Colors/Gray/50"
+  value?: string            // Fallback color value like "#F8FAFC"
   _resolved?: {             // Filled in at render time
     id: string
     sessionID: number
@@ -118,24 +130,38 @@ export function getRegistrySize(): number {
  * 
  * @example
  * ```ts
+ * // With explicit fallback values (recommended)
+ * export const colors = defineVars({
+ *   primary: { name: 'Colors/Gray/50', value: '#F8FAFC' },
+ *   accent: { name: 'Colors/Blue/500', value: '#3B82F6' },
+ * })
+ * 
+ * // Name only (value loaded from Figma registry)
  * export const colors = defineVars({
  *   primary: 'Colors/Gray/50',
- *   secondary: 'Colors/Gray/500',
  * })
  * 
  * // Use in components:
  * <Frame style={{ backgroundColor: colors.primary }} />
  * ```
  */
-export function defineVars<T extends Record<string, string>>(
+export function defineVars<T extends Record<string, VarDef>>(
   vars: T
 ): { [K in keyof T]: FigmaVariable } {
   const result = {} as { [K in keyof T]: FigmaVariable }
   
-  for (const [key, value] of Object.entries(vars)) {
-    result[key as keyof T] = {
-      [VAR_SYMBOL]: true,
-      name: value,
+  for (const [key, def] of Object.entries(vars)) {
+    if (typeof def === 'string') {
+      result[key as keyof T] = {
+        [VAR_SYMBOL]: true,
+        name: def,
+      }
+    } else {
+      result[key as keyof T] = {
+        [VAR_SYMBOL]: true,
+        name: def.name,
+        value: def.value,
+      }
     }
   }
   
@@ -147,12 +173,13 @@ export function defineVars<T extends Record<string, string>>(
  * 
  * @example
  * ```ts
- * const primaryColor = figmaVar('Colors/Gray/50')
+ * const primaryColor = figmaVar('Colors/Gray/50', '#F8FAFC')
  * ```
  */
-export function figmaVar(name: string): FigmaVariable {
+export function figmaVar(name: string, value?: string): FigmaVariable {
   return {
     [VAR_SYMBOL]: true,
     name,
+    value,
   }
 }

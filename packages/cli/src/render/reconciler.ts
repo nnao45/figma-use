@@ -79,9 +79,11 @@ function styleToNodeChange(
     const bgColor = style.backgroundColor
     if (isVariable(bgColor)) {
       const resolved = resolveVariable(bgColor)
+      // Use explicit value as fallback, or black
+      const fallback = bgColor.value ? parseColor(bgColor.value) : { r: 0, g: 0, b: 0, a: 1 }
       nodeChange.fillPaints = [{
         type: 'SOLID',
-        color: { r: 0, g: 0, b: 0, a: 1 }, // Placeholder, variable will override
+        color: { r: fallback.r, g: fallback.g, b: fallback.b, a: fallback.a },
         opacity: 1,
         visible: true,
         colorVariableBinding: {
@@ -104,9 +106,10 @@ function styleToNodeChange(
     const borderColor = style.borderColor
     if (isVariable(borderColor)) {
       const resolved = resolveVariable(borderColor)
+      const fallback = borderColor.value ? parseColor(borderColor.value) : { r: 0, g: 0, b: 0, a: 1 }
       nodeChange.strokePaints = [{
         type: 'SOLID',
-        color: { r: 0, g: 0, b: 0, a: 1 },
+        color: { r: fallback.r, g: fallback.g, b: fallback.b, a: fallback.a },
         opacity: 1,
         visible: true,
         colorVariableBinding: {
@@ -206,9 +209,10 @@ function styleToNodeChange(
       const textColor = style.color
       if (isVariable(textColor)) {
         const resolved = resolveVariable(textColor)
+        const fallback = textColor.value ? parseColor(textColor.value) : { r: 0, g: 0, b: 0, a: 1 }
         nodeChange.fillPaints = [{
           type: 'SOLID',
-          color: { r: 0, g: 0, b: 0, a: 1 },
+          color: { r: fallback.r, g: fallback.g, b: fallback.b, a: fallback.a },
           opacity: 1,
           visible: true,
           colorVariableBinding: {
