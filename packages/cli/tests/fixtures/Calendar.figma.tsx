@@ -80,7 +80,7 @@ const DayCell = ({
 }
 
 const WeekRow = ({ days, selectedDay, today }: { days: (number | null)[]; selectedDay?: number; today?: number }) => (
-  <Frame style={{ flexDirection: 'row', gap: 4 }}>
+  <Frame style={{ flexDirection: 'row', gap: 4, width: 308, height: 40 }}>
     {days.map((day, i) => (
       <DayCell 
         key={i} 
@@ -125,7 +125,7 @@ export default function Calendar() {
       </Frame>
 
       {/* Days header */}
-      <Frame style={{ flexDirection: 'row', gap: 4 }}>
+      <Frame style={{ flexDirection: 'row', gap: 4, width: 308, height: 40 }}>
         {DAYS.map(day => <DayHeader key={day} day={day} />)}
       </Frame>
 
