@@ -10,7 +10,8 @@ export default defineCommand({
       plugin: false,
       devtools: false,
       fileKey: null as string | null,
-      multiplayer: false
+      multiplayer: false,
+      connections: [] as Array<{ fileKey: string; fileName: string; active: boolean }>
     }
 
     // Check proxy
@@ -18,6 +19,7 @@ export default defineCommand({
       const status = await getStatus()
       result.proxy = true
       result.plugin = status.pluginConnected
+      result.connections = status.connections || []
     } catch {
       // Proxy not running
     }
@@ -38,9 +40,17 @@ export default defineCommand({
 
     // Human-readable output
     console.log(result.proxy ? '✓ Proxy running' : '✗ Proxy not running (run: figma-use proxy)')
-    console.log(
-      result.plugin ? '✓ Plugin connected' : '✗ Plugin not connected (open plugin in Figma)'
-    )
+    
+    if (result.connections.length > 0) {
+      console.log(`✓ Plugin connected (${result.connections.length} file${result.connections.length > 1 ? 's' : ''})`)
+      for (const conn of result.connections) {
+        const marker = conn.active ? '→' : ' '
+        console.log(`  ${marker} ${conn.fileName} (${conn.fileKey})`)
+      }
+    } else {
+      console.log('✗ Plugin not connected (open plugin in Figma)')
+    }
+
     console.log(
       result.devtools
         ? '✓ DevTools available'

@@ -27,6 +27,7 @@ export { default as style } from './style/index.ts'
 export { default as boolean } from './boolean/index.ts'
 export { default as group } from './group/index.ts'
 export { default as component } from './component/index.ts'
+export { default as connector } from './connector/index.ts'
 
 // CDP commands (no token required)
 export { default as comment } from './comment/index.ts'

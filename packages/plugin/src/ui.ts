@@ -4,12 +4,16 @@ console.log('[Figma Bridge] UI loaded')
 
 let ws: WebSocket | null = null
 let statusEl: HTMLElement | null = null
+let currentFileKey: string | null = null
+let currentFileName: string | null = null
 
 function connect() {
   ws = new WebSocket(PROXY_URL)
 
   ws.onopen = () => {
     console.log('[Figma Bridge] Connected to proxy')
+    // Request file info from main thread
+    parent.postMessage({ pluginMessage: { type: 'get-file-info' } }, '*')
     updateStatus(true)
   }
 
@@ -31,10 +35,26 @@ function connect() {
 window.onmessage = (event) => {
   const msg = event.data.pluginMessage as {
     type: string
-    id: string
+    id?: string
     result?: unknown
     error?: string
+    fileKey?: string
+    fileName?: string
   }
+  
+  if (msg.type === 'file-info' && ws) {
+    currentFileKey = msg.fileKey || null
+    currentFileName = msg.fileName || null
+    // Register this plugin instance with proxy
+    ws.send(JSON.stringify({ 
+      type: 'register', 
+      fileKey: currentFileKey, 
+      fileName: currentFileName 
+    }))
+    console.log('[Figma Bridge] Registered file:', currentFileName, currentFileKey)
+    return
+  }
+  
   if (msg.type !== 'result' || !ws) return
   ws.send(JSON.stringify({ id: msg.id, result: msg.result, error: msg.error }))
 }

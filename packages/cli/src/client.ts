@@ -26,9 +26,13 @@ export async function sendCommand<T = unknown>(
   return data.result as T
 }
 
-export async function getStatus(): Promise<{ pluginConnected: boolean }> {
+export async function getStatus(): Promise<{ 
+  pluginConnected: boolean
+  activeFile?: string
+  connections?: Array<{ fileKey: string; fileName: string; active: boolean }>
+}> {
   const response = await fetch(`${PROXY_URL}/status`)
-  return response.json() as Promise<{ pluginConnected: boolean }>
+  return response.json()
 }
 
 export function handleError(error: unknown): never {
