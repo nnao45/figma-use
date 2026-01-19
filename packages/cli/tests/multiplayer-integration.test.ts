@@ -13,6 +13,7 @@ import {
   type NodeChange
 } from '../src/multiplayer/index.ts'
 import { run } from './helpers.ts'
+import { retry } from '../src/retry.ts'
 
 let client: FigmaMultiplayerClient | null = null
 let sessionID = 0
@@ -30,16 +31,16 @@ async function createAndVerify(nodeChange: NodeChange): Promise<any> {
   createdNodeIds.push(nodeId)
 
   // Verify via plugin with retry (multiplayer sync may take time)
-  for (let attempt = 0; attempt < 20; attempt++) {
-    try {
-      const node = await run(`node get ${nodeId} --json`)
-      if (node) return node
-    } catch {
-      // Node not found yet, retry
-    }
-    await new Promise(resolve => setTimeout(resolve, 150))
-  }
-  return null
+  return retry(
+    async () => {
+      try {
+        return await run(`node get ${nodeId} --json`)
+      } catch {
+        return null
+      }
+    },
+    { maxAttempts: 20, delayMs: 150 }
+  )
 }
 
 describe('multiplayer integration', () => {

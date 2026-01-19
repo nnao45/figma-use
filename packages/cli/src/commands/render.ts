@@ -21,6 +21,7 @@ import {
   collectIcons
 } from '../render/index.ts'
 import { transformSync } from 'esbuild'
+import { sleep } from '../retry.ts'
 
 const PROXY_URL = process.env.FIGMA_PROXY_URL || 'http://localhost:38451'
 
@@ -324,7 +325,7 @@ export default defineCommand({
       // Wait for multiplayer sync before importing icons
       // (parent nodes must be visible to Plugin API)
       if (pendingIconsList.length > 0) {
-        await new Promise(resolve => setTimeout(resolve, 100))
+        await sleep(100)
       }
 
       // Import pending icons via Plugin API

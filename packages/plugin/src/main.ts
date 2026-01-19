@@ -2,6 +2,26 @@ import svgpath from 'svgpath'
 
 console.log('[Figma Bridge] Plugin main loaded at', new Date().toISOString())
 
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+async function retry<T>(
+  fn: () => Promise<T | null | undefined>,
+  maxAttempts = 10,
+  delayMs = 50,
+  backoff: 'fixed' | 'linear' | 'exponential' = 'fixed'
+): Promise<T | null> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const result = await fn()
+    if (result) return result
+    if (attempt < maxAttempts - 1) {
+      const delay = backoff === 'linear' ? delayMs * (attempt + 1) :
+                    backoff === 'exponential' ? delayMs * Math.pow(2, attempt) : delayMs
+      await sleep(delay)
+    }
+  }
+  return null
+}
+
 figma.showUI(__html__, { width: 300, height: 200 })
 
 // Font cache to avoid repeated loadFontAsync calls
@@ -1825,13 +1845,11 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
         nodeId: string
         pendingComponentSetInstances?: PendingInstance[]
       }
-      // Multiplayer nodes may not be immediately visible, retry with exponential backoff
-      let root: BaseNode | null = null
-      for (let i = 0; i < 10; i++) {
-        root = await figma.getNodeByIdAsync(nodeId)
-        if (root) break
-        await new Promise((r) => setTimeout(r, 100 * (i + 1)))
-      }
+      // Multiplayer nodes may not be immediately visible
+      const root = await retry(
+        () => figma.getNodeByIdAsync(nodeId),
+        10, 100, 'linear'
+      )
       if (!root) return null
 
       // Create ComponentSet instances via Plugin API (multiplayer can't link them correctly)
@@ -2076,19 +2094,17 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
 
 async function appendToParent(node: SceneNode, parentId?: string, insertIndex?: number) {
   if (parentId) {
-    // Retry loop for multiplayer sync (parent may not be visible yet)
-    for (let attempt = 0; attempt < 10; attempt++) {
-      const parent = (await figma.getNodeByIdAsync(parentId)) as (FrameNode & ChildrenMixin) | null
-      if (parent && 'appendChild' in parent) {
-        if (insertIndex !== undefined && 'insertChild' in parent) {
-          parent.insertChild(insertIndex, node)
-        } else {
-          parent.appendChild(node)
-        }
-        return
+    const parent = await retry(
+      () => figma.getNodeByIdAsync(parentId) as Promise<(FrameNode & ChildrenMixin) | null>,
+      10, 50
+    )
+    if (parent && 'appendChild' in parent) {
+      if (insertIndex !== undefined && 'insertChild' in parent) {
+        parent.insertChild(insertIndex, node)
+      } else {
+        parent.appendChild(node)
       }
-      // Wait before retry
-      await new Promise(resolve => setTimeout(resolve, 50))
+      return
     }
     console.warn(`Parent ${parentId} not found after retries, appending to page`)
   }
