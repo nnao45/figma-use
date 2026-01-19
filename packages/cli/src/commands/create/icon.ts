@@ -2,7 +2,7 @@ import { defineCommand } from 'citty'
 import { sendCommand, printResult, handleError } from '../../client.ts'
 import { loadIconSvg } from '../../render/icon.ts'
 import { fail } from '../../format.ts'
-import { parseColorArg, colorArgToPayload } from '../../color-arg.ts'
+import { parseColorArg } from '../../color-arg.ts'
 
 export default defineCommand({
   meta: { description: 'Create an icon from Iconify' },
@@ -46,48 +46,20 @@ export default defineCommand({
 
       // Bind variable to icon fills if specified
       if (colorArg?.variable) {
-        await sendCommand('eval', {
-          code: `
-            const node = await figma.getNodeByIdAsync('${result.id}')
-            if (!node || !('children' in node)) return null
-            
-            const variables = await figma.variables.getLocalVariablesAsync('COLOR')
-            const variable = variables.find(v => v.name === '${colorArg.variable}')
-            if (!variable) return null
-            
-            function bindFills(n) {
-              if ('fills' in n && Array.isArray(n.fills) && n.fills.length > 0) {
-                const fills = [...n.fills]
-                for (let i = 0; i < fills.length; i++) {
-                  if (fills[i].type === 'SOLID') {
-                    fills[i] = figma.variables.setBoundVariableForPaint(fills[i], 'color', variable)
-                  }
-                }
-                n.fills = fills
-              }
-              if ('children' in n) {
-                for (const child of n.children) bindFills(child)
-              }
-            }
-            bindFills(node)
-            return true
-          `
+        await sendCommand('bind-fill-variable-by-name', {
+          id: result.id,
+          variableName: colorArg.variable,
+          recursive: true
         })
       }
 
       // Convert to component if requested
       let finalId = result.id
       if (args.component) {
-        const newId = await sendCommand('eval', {
-          code: `
-            const node = await figma.getNodeByIdAsync('${result.id}')
-            if (node && 'createComponentFromNode' in figma) {
-              return figma.createComponentFromNode(node).id
-            }
-            return null
-          `
-        }) as string | null
-        if (newId) finalId = newId
+        const componentResult = await sendCommand('convert-to-component', { 
+          id: result.id 
+        }) as { id: string }
+        finalId = componentResult.id
       }
 
       // Get final result

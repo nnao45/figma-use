@@ -82,6 +82,31 @@ GritQL is better than sed for:
 
 Plugin uses esbuild (not Bun) because Figma requires ES2015. Build outputs to `packages/plugin/dist/`.
 
+## No Inline Eval
+
+**Never use `sendCommand('eval', { code: '...' })` in CLI commands.**
+
+Instead, create a proper command in `packages/plugin/src/main.ts`:
+
+```typescript
+// ❌ Bad: inline eval
+await sendCommand('eval', {
+  code: `
+    const node = await figma.getNodeByIdAsync('${id}')
+    figma.createComponentFromNode(node)
+  `
+})
+
+// ✅ Good: dedicated command
+await sendCommand('convert-to-component', { id })
+```
+
+Benefits:
+- Type safety for arguments
+- Proper error handling
+- Testable
+- No string interpolation bugs
+
 ## Release
 
 ⚠️ **NEVER commit and release in one step!**

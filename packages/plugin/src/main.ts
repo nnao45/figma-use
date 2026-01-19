@@ -779,6 +779,14 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       return serializeNode(clone)
     }
 
+    case 'convert-to-component': {
+      const { id } = args as { id: string }
+      const node = (await figma.getNodeByIdAsync(id)) as SceneNode | null
+      if (!node) throw new Error('Node not found')
+      const component = figma.createComponentFromNode(node)
+      return serializeNode(component)
+    }
+
     // ==================== CREATE STYLES ====================
     case 'create-paint-style': {
       const { name, color } = args as { name: string; color: string }
@@ -944,6 +952,40 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       const node = (await figma.getNodeByIdAsync(id)) as SceneNode | null
       if (!node) throw new Error('Node not found')
       node.name = name
+      return serializeNode(node)
+    }
+
+    case 'bind-fill-variable-by-name': {
+      const { id, variableName, recursive } = args as { 
+        id: string
+        variableName: string
+        recursive?: boolean 
+      }
+      const node = (await figma.getNodeByIdAsync(id)) as SceneNode | null
+      if (!node) throw new Error('Node not found')
+
+      const variables = await figma.variables.getLocalVariablesAsync('COLOR')
+      const variable = variables.find(v => v.name === variableName)
+      if (!variable) throw new Error(`Variable "${variableName}" not found`)
+
+      function bindFills(n: SceneNode) {
+        if ('fills' in n && Array.isArray(n.fills) && n.fills.length > 0) {
+          const fills = [...n.fills] as Paint[]
+          for (let i = 0; i < fills.length; i++) {
+            if (fills[i].type === 'SOLID') {
+              fills[i] = figma.variables.setBoundVariableForPaint(fills[i], 'color', variable)
+            }
+          }
+          ;(n as GeometryMixin).fills = fills
+        }
+        if (recursive && 'children' in n) {
+          for (const child of (n as ChildrenMixin).children) {
+            bindFills(child as SceneNode)
+          }
+        }
+      }
+
+      bindFills(node)
       return serializeNode(node)
     }
 
