@@ -104,14 +104,14 @@ const NavButton = ({ direction }: { direction: 'left' | 'right' }) => (
       height: 32,
       borderRadius: 6,
       backgroundColor: colors.bgHover,
-      flexDirection: 'column',
+      flexDirection: 'row',
       justifyContent: 'center',
       alignItems: 'center'
     }}
   >
     <Icon
       icon={direction === 'left' ? 'lucide:chevron-left' : 'lucide:chevron-right'}
-      size={18}
+      size={16}
       color={colors.textMuted}
     />
   </Frame>
@@ -126,7 +126,6 @@ export default function Calendar() {
       name="Calendar"
       style={{
         width: 340,
-        height: 420,
         backgroundColor: colors.bg,
         borderRadius: 12,
         padding: 16,
@@ -150,16 +149,15 @@ export default function Calendar() {
         <NavButton direction="left" />
         <Frame
           style={{
-            width: 200,
             height: 32,
             flexDirection: 'row',
             justifyContent: 'center',
             alignItems: 'center',
-            gap: 8
+            gap: 6
           }}
         >
-          <Icon icon="lucide:calendar" size={18} color={colors.primary} />
           <Text style={{ fontSize: 16, fontWeight: 600, color: colors.text }}>January 2026</Text>
+          <Icon icon="lucide:calendar" size={16} color={colors.primary} />
         </Frame>
         <NavButton direction="right" />
       </Frame>
@@ -184,8 +182,7 @@ export default function Calendar() {
           justifyContent: 'center',
           alignItems: 'center',
           width: 308,
-          height: 36,
-          marginTop: 8
+          height: 40
         }}
       >
         <Frame
@@ -195,14 +192,14 @@ export default function Calendar() {
             alignItems: 'center',
             justifyContent: 'center',
             gap: 6,
-            paddingLeft: 12,
-            paddingRight: 12,
+            paddingLeft: 14,
+            paddingRight: 14,
             height: 32,
             borderRadius: 6,
             backgroundColor: colors.bgHover
           }}
         >
-          <Icon icon="lucide:circle-dot" size={14} color={colors.primary} />
+          <Icon icon="lucide:calendar-check" size={14} color={colors.primary} />
           <Text style={{ fontSize: 13, fontWeight: 500, color: colors.primary }}>Today</Text>
         </Frame>
       </Frame>

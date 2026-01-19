@@ -1070,17 +1070,19 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
     }
 
     case 'import-svg': {
-      const { svg, x, y, name, parentId } = args as {
+      const { svg, x, y, name, parentId, noFill } = args as {
         svg: string
         x?: number
         y?: number
         name?: string
         parentId?: string
+        noFill?: boolean
       }
       const node = figma.createNodeFromSvg(svg)
       if (x !== undefined) node.x = x
       if (y !== undefined) node.y = y
       if (name) node.name = name
+      if (noFill) node.fills = []
       await appendToParent(node, parentId)
       return serializeNode(node)
     }

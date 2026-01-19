@@ -320,14 +320,15 @@ export default defineCommand({
             x: icon.x,
             y: icon.y,
             parentId,
-            name: icon.name
+            name: icon.name,
+            noFill: true
           })
         } catch (e) {
           consola.error(`Failed to import icon "${icon.name}":`, e)
         }
       }
 
-      // Trigger layout recalculation via Plugin API
+      // Trigger layout recalculation via Plugin API (needed after icons are added)
       // Multiplayer nodes aren't immediately visible to plugin, so we call separately
       const rootId = `${result.nodeChanges[0].guid.sessionID}:${result.nodeChanges[0].guid.localID}`
       try {
