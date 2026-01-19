@@ -25,6 +25,7 @@ interface InputProps {
   size?: InputSize
   icon?: string
   iconRight?: string
+  iconRightColor?: string
   error?: boolean
   errorMessage?: string
   disabled?: boolean
@@ -43,6 +44,7 @@ const Input = ({
   size = 'md',
   icon,
   iconRight,
+  iconRightColor,
   error,
   errorMessage,
   disabled,
@@ -54,7 +56,7 @@ const Input = ({
   const textColor = disabled ? c.disabledText : value ? c.text : c.placeholder
 
   return (
-    <Frame name={`Input-${size}${error ? '-error' : ''}${disabled ? '-disabled' : ''}`} style={{ flex: 'col', gap: 6 }}>
+    <Frame name={`Input-${size}${error ? '-error' : ''}${disabled ? '-disabled' : ''}`} style={{ flex: 'col', gap: 8 }}>
       {label && <Text style={{ size: 14, weight: 500, color: c.text }}>{label}</Text>}
       <Frame
         style={{
@@ -71,7 +73,7 @@ const Input = ({
       >
         {icon && <Icon icon={icon} size={s.size + 2} color={c.muted} />}
         <Text style={{ size: s.size, color: textColor }}>{value || placeholder || 'Placeholder'}</Text>
-        {iconRight && <Icon icon={iconRight} size={s.size + 2} color={c.muted} />}
+        {iconRight && <Icon icon={iconRight} size={s.size + 2} color={iconRightColor || c.muted} />}
       </Frame>
       {error && errorMessage && (
         <Text style={{ size: 12, color: c.error }}>{errorMessage}</Text>
@@ -99,7 +101,7 @@ export default function Inputs() {
         <Frame style={{ flex: 'row', gap: 16, items: 'center' }}>
           <Input placeholder="Search..." icon="tabler:search" />
           <Input placeholder="Email" icon="tabler:mail" />
-          <Input value="john@example.com" icon="tabler:mail" iconRight="tabler:check" />
+          <Input value="john@example.com" icon="tabler:mail" iconRight="tabler:circle-check" iconRightColor="#10B981" />
         </Frame>
       </Frame>
 
@@ -119,7 +121,7 @@ export default function Inputs() {
         <Text style={{ size: 12, weight: 600, color: c.muted }}>WITH LABELS</Text>
         <Frame style={{ flex: 'row', gap: 16, items: 'start' }}>
           <Input label="Email" placeholder="you@example.com" icon="tabler:mail" />
-          <Input label="Password" value="password123" icon="tabler:lock" iconRight="tabler:eye-off" />
+          <Input label="Password" value="••••••••••••" icon="tabler:lock" iconRight="tabler:eye" />
         </Frame>
       </Frame>
     </Frame>
