@@ -43,7 +43,7 @@ export {
   getComponentRegistry
 } from './components.tsx'
 
-export { preloadIcons, loadIconSvg, getIconData } from './icon.ts'
+export { preloadIcons, loadIconSvg, getIconData, collectIcons } from './icon.ts'
 
 export {
   // ComponentSet (variants)

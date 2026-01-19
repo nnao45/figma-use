@@ -290,9 +290,9 @@ describe('render with icons', () => {
   })
 
   test('collectIcons finds icon primitives in element tree', async () => {
+    const { collectIcons } = await import('../../src/render/index.ts')
     const React = (await import('react')).default
 
-    // Create element tree with icons
     const element = React.createElement(
       'frame',
       { name: 'Test' },
@@ -300,37 +300,6 @@ describe('render with icons', () => {
       React.createElement('icon', { icon: 'lucide:star', size: 32 }),
       React.createElement('frame', null, React.createElement('icon', { icon: 'heroicons:heart-solid' }))
     )
-
-    // Import collectIcons logic (inline implementation for test)
-    function collectIcons(el: React.ReactElement): Array<{ name: string; size?: number }> {
-      const icons: Array<{ name: string; size?: number }> = []
-      function traverse(node: React.ReactNode): void {
-        if (!node || typeof node !== 'object') return
-        if (Array.isArray(node)) {
-          node.forEach(traverse)
-          return
-        }
-        const reactEl = node as React.ReactElement
-        if (!reactEl.type) return
-        if (reactEl.type === 'icon') {
-          const props = reactEl.props as { icon?: string; size?: number }
-          if (props.icon) icons.push({ name: props.icon, size: props.size })
-        }
-        if (typeof reactEl.type === 'function') {
-          try {
-            const rendered = (reactEl.type as React.FC)(reactEl.props)
-            if (rendered) traverse(rendered)
-          } catch {}
-        }
-        const children = reactEl.props?.children
-        if (children) {
-          if (Array.isArray(children)) children.forEach(traverse)
-          else traverse(children)
-        }
-      }
-      traverse(el)
-      return icons
-    }
 
     const icons = collectIcons(element)
     expect(icons).toHaveLength(3)

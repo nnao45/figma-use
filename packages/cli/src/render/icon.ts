@@ -3,6 +3,7 @@ import { setAPIModule } from '@iconify/core/lib/api/modules'
 import { fetchAPIModule } from '@iconify/core/lib/api/modules/fetch'
 import { iconToSVG } from '@iconify/utils'
 import type { IconifyIcon } from '@iconify/types'
+import type { ReactElement, ReactNode } from 'react'
 
 // Initialize API module
 setAPIModule('', fetchAPIModule)
@@ -111,4 +112,52 @@ export const iconSets = {
   fluent: 'Fluent UI',
   ion: 'Ionicons',
   bi: 'Bootstrap Icons'
+}
+
+/**
+ * Recursively collect Icon primitives from React element tree
+ */
+export function collectIcons(element: ReactElement): Array<{ name: string; size?: number }> {
+  const icons: Array<{ name: string; size?: number }> = []
+
+  function traverse(node: ReactNode): void {
+    if (!node || typeof node !== 'object') return
+
+    if (Array.isArray(node)) {
+      node.forEach(traverse)
+      return
+    }
+
+    const el = node as ReactElement
+    if (!el.type) return
+
+    if (el.type === 'icon') {
+      const props = el.props as { icon?: string; size?: number }
+      if (props.icon) {
+        icons.push({ name: props.icon, size: props.size })
+      }
+    }
+
+    if (typeof el.type === 'function') {
+      try {
+        const Component = el.type as (props: Record<string, unknown>) => ReactNode
+        const rendered = Component(el.props as Record<string, unknown>)
+        if (rendered) traverse(rendered)
+      } catch {
+        // Ignore render errors during collection
+      }
+    }
+
+    const props = el.props as { children?: ReactNode }
+    if (props.children) {
+      if (Array.isArray(props.children)) {
+        props.children.forEach(traverse)
+      } else {
+        traverse(props.children)
+      }
+    }
+  }
+
+  traverse(element)
+  return icons
 }

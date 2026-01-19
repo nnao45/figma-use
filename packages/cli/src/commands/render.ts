@@ -17,7 +17,8 @@ import {
   clearPendingComponentSetInstances,
   getPendingIcons,
   clearPendingIcons,
-  preloadIcons
+  preloadIcons,
+  collectIcons
 } from '../render/index.ts'
 import { transformSync } from 'esbuild'
 
@@ -373,54 +374,4 @@ export default defineCommand({
 function parseGUID(id: string): { sessionID: number; localID: number } {
   const parts = id.split(':').map(Number)
   return { sessionID: parts[0] ?? 0, localID: parts[1] ?? 0 }
-}
-
-/**
- * Recursively collect Icon primitives from React element tree
- */
-function collectIcons(element: React.ReactElement): Array<{ name: string; size?: number }> {
-  const icons: Array<{ name: string; size?: number }> = []
-  
-  function traverse(el: React.ReactNode): void {
-    if (!el || typeof el !== 'object') return
-    
-    if (Array.isArray(el)) {
-      el.forEach(traverse)
-      return
-    }
-    
-    const reactEl = el as React.ReactElement
-    if (!reactEl.type) return
-    
-    // Check if this is an icon primitive
-    if (reactEl.type === 'icon') {
-      const props = reactEl.props as { icon?: string; size?: number }
-      if (props.icon) {
-        icons.push({ name: props.icon, size: props.size })
-      }
-    }
-    
-    // If it's a function component, render it to traverse its output
-    if (typeof reactEl.type === 'function') {
-      try {
-        const rendered = (reactEl.type as React.FC<Record<string, unknown>>)(reactEl.props as Record<string, unknown>)
-        if (rendered) traverse(rendered as React.ReactNode)
-      } catch {
-        // Ignore render errors during collection
-      }
-    }
-    
-    // Traverse children
-    const children = (reactEl.props as Record<string, unknown>)?.children as React.ReactNode
-    if (children) {
-      if (Array.isArray(children)) {
-        children.forEach(traverse)
-      } else {
-        traverse(children)
-      }
-    }
-  }
-  
-  traverse(element)
-  return icons
 }
