@@ -105,13 +105,14 @@ Render JSX to Figma (~100x faster than plugin API).
 
 EXAMPLES
 
-  # From stdin
-  echo '<Frame style={{padding: 24, backgroundColor: "#3B82F6"}}>
-    <Text style={{fontSize: 18, color: "#FFF"}}>Hello</Text>
-  </Frame>' | figma-use render --stdin
+  # From stdin (pure JSX only, no variables/logic)
+  echo '<Frame style={{p: 24, bg: "#3B82F6", rounded: 12}}>
+    <Text style={{size: 18, color: "#FFF"}}>Hello</Text>
+  </Frame>' | figma-use render --stdin --x 100 --y 100
 
-  # From file
+  # From file (supports components, variants, logic)
   figma-use render ./Card.figma.tsx
+  figma-use render ./Card.figma.tsx --x 100 --y 200
   figma-use render ./Card.figma.tsx --props '{"title": "Hello"}'
 
 COMPONENTS
@@ -132,18 +133,32 @@ VARIABLE BINDINGS
   const colors = defineVars({
     primary: { name: 'Colors/Blue/500', value: '#3B82F6' },
   })
-  <Frame style={{ backgroundColor: colors.primary }} />
+  <Frame style={{ bg: colors.primary }} />
+
+ICONS (150k+ from Iconify)
+
+  <Icon icon="mdi:home" size={24} color="#3B82F6" />
+  <Icon icon="lucide:star" size={32} color="#F59E0B" />
 
 ELEMENTS
 
-  Frame, Rectangle, Ellipse, Text, Line, Star, Polygon, Vector, Group
+  Frame, Rectangle, Ellipse, Text, Line, Star, Polygon, Vector, Group, Icon
 
-STYLE PROPS
+STYLE SHORTHANDS
 
-  Layout:     flexDirection, justifyContent, alignItems, gap, padding
-  Size:       width, height, x, y  
-  Appearance: backgroundColor, borderColor, borderWidth, borderRadius, opacity
-  Text:       fontSize, fontFamily, fontWeight, color, textAlign
+  w, h          width, height
+  bg            backgroundColor
+  rounded       borderRadius
+  p, px, py     padding, paddingLeft+Right, paddingTop+Bottom
+  pt, pr, pb, pl  individual padding sides
+  flex          flexDirection ("row" | "col")
+  justify       justifyContent ("start" | "center" | "end" | "between")
+  items         alignItems ("start" | "center" | "end" | "stretch")
+  size          fontSize
+  weight        fontWeight
+  font          fontFamily
+
+  Full names also work: width, backgroundColor, borderRadius, etc.
 
 SETUP
 
