@@ -10,6 +10,25 @@ function parseColorArg(color: string | undefined): { hex?: string; variable?: st
   return { hex: color }
 }
 
+/**
+ * Replace currentColor in SVG fill/stroke attributes using HTMLRewriter
+ */
+async function replaceSvgCurrentColor(svg: string, color: string): Promise<string> {
+  const rewriter = new HTMLRewriter()
+    .on('*', {
+      element(el) {
+        if (el.getAttribute('fill') === 'currentColor') {
+          el.setAttribute('fill', color)
+        }
+        if (el.getAttribute('stroke') === 'currentColor') {
+          el.setAttribute('stroke', color)
+        }
+      }
+    })
+  
+  return await rewriter.transform(new Response(svg)).text()
+}
+
 export default defineCommand({
   meta: { description: 'Create an icon from Iconify' },
   args: {
@@ -34,9 +53,8 @@ export default defineCommand({
 
       const colorArg = parseColorArg(args.color)
       
-      // Replace currentColor with hex (variable binding happens after import)
-      let svg = iconData.svg
-      svg = svg.replace(/currentColor/g, colorArg?.hex || '#000000')
+      // Replace currentColor in fill/stroke attributes using HTMLRewriter
+      const svg = await replaceSvgCurrentColor(iconData.svg, colorArg?.hex || '#000000')
 
       // Import SVG
       const result = await sendCommand('import-svg', {
