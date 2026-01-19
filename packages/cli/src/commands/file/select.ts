@@ -1,4 +1,5 @@
 import { defineCommand } from 'citty'
+import type { PluginConnection } from '../../client.ts'
 
 const PROXY_URL = process.env.FIGMA_PROXY_URL || 'http://localhost:38451'
 
@@ -10,7 +11,7 @@ export default defineCommand({
   async run({ args }) {
     // Get list of files
     const filesRes = await fetch(`${PROXY_URL}/files`)
-    const files = (await filesRes.json()) as Array<{ fileKey: string; fileName: string; active: boolean }>
+    const files = (await filesRes.json()) as PluginConnection[]
 
     if (files.length === 0) {
       console.error('No files connected')

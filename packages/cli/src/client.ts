@@ -4,6 +4,12 @@ export { printResult, printError, formatResult } from './output.ts'
 
 const PROXY_URL = process.env.FIGMA_PROXY_URL || 'http://localhost:38451'
 
+export interface PluginConnection {
+  fileKey: string
+  fileName: string
+  active: boolean
+}
+
 interface CommandResponse<T> {
   result?: T
   error?: string
@@ -29,7 +35,7 @@ export async function sendCommand<T = unknown>(
 export async function getStatus(): Promise<{ 
   pluginConnected: boolean
   activeFile?: string
-  connections?: Array<{ fileKey: string; fileName: string; active: boolean }>
+  connections?: PluginConnection[]
 }> {
   const response = await fetch(`${PROXY_URL}/status`)
   return response.json()

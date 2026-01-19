@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Multi-file support** — proxy now supports multiple simultaneous plugin connections
+  - Each plugin instance registers with fileKey and fileName
+  - `file list` — show all connected files
+  - `file select <name>` — switch active file (partial match supported)
+  - `status` shows all connected files with active marker
+  
+- **Connector commands** — work with connector lines
+  - `connector list` — list connectors on current page
+  - `connector get <id>` — get connector details (endpoints, stroke, line type)
+  - `connector set <id>` — update connector properties (stroke, weight, line type, caps)
+  - `connector create` — create connector (FigJam only, Figma API limitation)
+
+- **`figma_render` MCP tool** — render JSX via MCP protocol
+
+### Changed
+
+- Extracted `transformJsxSnippet` to separate module for reuse
+
 ## [0.7.1] - 2026-01-19
 
 ### Changed

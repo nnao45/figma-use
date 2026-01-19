@@ -1,5 +1,5 @@
 import { defineCommand } from 'citty'
-import { getStatus, getFileKey } from '../client.ts'
+import { getStatus, getFileKey, type PluginConnection } from '../client.ts'
 
 export default defineCommand({
   meta: { description: 'Check connection status (plugin, DevTools, multiplayer)' },
@@ -11,7 +11,7 @@ export default defineCommand({
       devtools: false,
       fileKey: null as string | null,
       multiplayer: false,
-      connections: [] as Array<{ fileKey: string; fileName: string; active: boolean }>
+      connections: [] as PluginConnection[]
     }
 
     // Check proxy
