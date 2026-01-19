@@ -161,6 +161,8 @@ export default defineCommand({
     stdin: { type: 'boolean', description: 'Read TSX from stdin' },
     props: { type: 'string', description: 'JSON props to pass to component' },
     parent: { type: 'string', description: 'Parent node ID (sessionID:localID)' },
+    x: { type: 'string', description: 'X position of rendered root' },
+    y: { type: 'string', description: 'Y position of rendered root' },
     export: { type: 'string', description: 'Named export (default: default)' },
     json: { type: 'boolean', description: 'Output as JSON' },
     'dry-run': { type: 'boolean', description: 'Output NodeChanges without sending to Figma' }
@@ -292,6 +294,13 @@ export default defineCommand({
         startLocalID: Date.now() % 1000000
       })
 
+      // Apply x/y offset to root node (coordinates are in transform matrix)
+      const rootNode = result.nodeChanges[0]
+      if ((args.x || args.y) && rootNode?.transform) {
+        if (args.x) rootNode.transform.m02 = Number(args.x)
+        if (args.y) rootNode.transform.m12 = Number(args.y)
+      }
+
       if (args["dry-run"]) {
         console.log(JSON.stringify(result.nodeChanges, null, 2))
         return
@@ -312,6 +321,12 @@ export default defineCommand({
       // Send to Figma via proxy
       await sendNodeChanges(result.nodeChanges, pendingInstances)
 
+      // Wait for multiplayer sync before importing icons
+      // (parent nodes must be visible to Plugin API)
+      if (pendingIconsList.length > 0) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+
       // Import pending icons via Plugin API
       for (const icon of pendingIconsList) {
         try {
@@ -322,7 +337,8 @@ export default defineCommand({
             y: icon.y,
             parentId,
             name: icon.name,
-            noFill: true
+            noFill: true,
+            insertIndex: icon.childIndex
           })
         } catch (e) {
           consola.error(`Failed to import icon "${icon.name}":`, e)

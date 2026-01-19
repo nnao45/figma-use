@@ -79,7 +79,7 @@ export function clearPendingComponentSetInstances() {
 export interface PendingIcon {
   svg: string
   parentGUID: { sessionID: number; localID: number }
-  position: string
+  childIndex: number
   x: number
   y: number
   name: string
@@ -430,6 +430,7 @@ function collectNodeChanges(
   sessionID: number,
   parentGUID: { sessionID: number; localID: number },
   position: string,
+  childIndex: number,
   result: NodeChange[],
   container: Container
 ): void {
@@ -462,7 +463,7 @@ function collectNodeChanges(
     pendingIcons.push({
       svg,
       parentGUID,
-      position,
+      childIndex,
       x: (style.x as number) || 0,
       y: (style.y as number) || 0,
       name: nodeName || iconName.replace(':', '/')
@@ -700,7 +701,7 @@ function collectNodeChanges(
   const thisGUID = { sessionID, localID: instance.localID }
   instance.children.forEach((child, i) => {
     const childPosition = String.fromCharCode(33 + (i % 90))
-    collectNodeChanges(child, sessionID, thisGUID, childPosition, result, container)
+    collectNodeChanges(child, sessionID, thisGUID, childPosition, i, result, container)
   })
 }
 
@@ -904,6 +905,7 @@ export function renderToNodeChanges(
       options.sessionID,
       options.parentGUID,
       position,
+      i,
       nodeChanges,
       container
     )

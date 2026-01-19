@@ -51,7 +51,6 @@ async function createNodeFast(
     width,
     height,
     name,
-    _parentId,
     fill,
     stroke,
     strokeWeight,
@@ -70,7 +69,6 @@ async function createNodeFast(
     width?: number
     height?: number
     name?: string
-    parentId?: string
     fill?: string
     stroke?: string
     strokeWeight?: number
@@ -496,7 +494,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
 
     // ==================== CREATE SHAPES ====================
     case 'create-rectangle': {
-      const { x, y, width, height, name, _parentId, fill, stroke, strokeWeight, radius, opacity } =
+      const { x, y, width, height, name, parentId, fill, stroke, strokeWeight, radius, opacity } =
         args as {
           x: number
           y: number
@@ -525,7 +523,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
     }
 
     case 'create-ellipse': {
-      const { x, y, width, height, name, _parentId, fill, stroke, strokeWeight, opacity } = args as {
+      const { x, y, width, height, name, parentId, fill, stroke, strokeWeight, opacity } = args as {
         x: number
         y: number
         width: number
@@ -551,7 +549,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
     }
 
     case 'create-line': {
-      const { x, y, length, rotation, name, _parentId, stroke, strokeWeight } = args as {
+      const { x, y, length, rotation, name, parentId, stroke, strokeWeight } = args as {
         x: number
         y: number
         length: number
@@ -637,7 +635,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
         width,
         height,
         name,
-        _parentId,
+        parentId,
         fill,
         stroke,
         strokeWeight,
@@ -768,7 +766,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
     }
 
     case 'create-component': {
-      const { name, _parentId, x, y, width, height, fill } = args as { 
+      const { name, parentId, x, y, width, height, fill } = args as { 
         name: string
         parentId?: string
         x?: number
@@ -1070,20 +1068,21 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
     }
 
     case 'import-svg': {
-      const { svg, x, y, name, _parentId, noFill } = args as {
+      const { svg, x, y, name, parentId, noFill, insertIndex } = args as {
         svg: string
         x?: number
         y?: number
         name?: string
         parentId?: string
         noFill?: boolean
+        insertIndex?: number
       }
       const node = figma.createNodeFromSvg(svg)
       if (x !== undefined) node.x = x
       if (y !== undefined) node.y = y
       if (name) node.name = name
       if (noFill) node.fills = []
-      await appendToParent(node, parentId)
+      await appendToParent(node, parentId, insertIndex)
       return serializeNode(node)
     }
 
@@ -2075,13 +2074,23 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
   }
 }
 
-async function appendToParent(node: SceneNode, parentId?: string) {
+async function appendToParent(node: SceneNode, parentId?: string, insertIndex?: number) {
   if (parentId) {
-    const parent = (await figma.getNodeByIdAsync(parentId)) as (FrameNode & ChildrenMixin) | null
-    if (parent && 'appendChild' in parent) {
-      parent.appendChild(node)
-      return
+    // Retry loop for multiplayer sync (parent may not be visible yet)
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const parent = (await figma.getNodeByIdAsync(parentId)) as (FrameNode & ChildrenMixin) | null
+      if (parent && 'appendChild' in parent) {
+        if (insertIndex !== undefined && 'insertChild' in parent) {
+          parent.insertChild(insertIndex, node)
+        } else {
+          parent.appendChild(node)
+        }
+        return
+      }
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, 50))
     }
+    console.warn(`Parent ${parentId} not found after retries, appending to page`)
   }
   figma.currentPage.appendChild(node)
 }
