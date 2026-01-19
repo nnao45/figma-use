@@ -227,6 +227,18 @@ figma-use create component --width 200 --height 100
 figma-use create instance --component <id>
 ```
 
+### Icons (Iconify)
+
+150k+ icons from 100+ sets (mdi, lucide, heroicons, tabler, fa, phosphor, etc.):
+
+```bash
+figma-use create icon mdi:home
+figma-use create icon lucide:star --size 48 --color "#FFD700"
+figma-use create icon heroicons:bell-solid --component  # as Figma component
+```
+
+Browse icons: https://icon-sets.iconify.design/
+
 ### Modify
 
 ```bash

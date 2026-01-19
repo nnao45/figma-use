@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`create icon`** — add icons from Iconify (150k+ icons from 100+ sets)
+  ```bash
+  figma-use create icon mdi:home
+  figma-use create icon lucide:star --size 48 --color "#FFD700"
+  figma-use create icon heroicons:bell-solid --component  # as Figma component
+  ```
+  Supports: mdi, lucide, heroicons, tabler, fa-solid, fa-regular, ri, ph, carbon, fluent, ion, bi, and more.
+
 - **Tailwind-like style shorthands** for JSX render:
   - Size: `w`, `h` → `width`, `height`
   - Colors: `bg` → `backgroundColor`, `rounded` → `borderRadius`

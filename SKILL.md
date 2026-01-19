@@ -219,7 +219,11 @@ figma-use create rect --width 100 --height 50 --fill "#FF0000" --radius 8
 figma-use create ellipse --width 80 --height 80 --fill "#00FF00"
 figma-use create text --text "Hello" --font-size 24 --fill "#000"
 figma-use create line --length 100 --stroke "#000"
+figma-use create icon mdi:home --size 24 --color "#000"        # Iconify icon
+figma-use create icon lucide:star --size 48 --component        # as Figma component
 ```
+
+**Icons:** 150k+ from Iconify — `mdi:*`, `lucide:*`, `heroicons:*`, `tabler:*`, `fa-solid:*`, `ph:*`, etc. Browse: https://icon-sets.iconify.design/
 
 ### Query
 
