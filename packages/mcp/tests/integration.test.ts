@@ -1,6 +1,6 @@
-import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
+import { describe, test, expect, beforeAll } from 'bun:test'
 import type { JSONRPCRequest, JSONRPCResponse } from '@modelcontextprotocol/sdk/types.js'
-import { getTools } from '../src/index.ts'
+
 
 const PROXY_URL = 'http://localhost:38451'
 

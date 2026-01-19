@@ -34,7 +34,7 @@ import Reconciler from 'react-reconciler'
 import { consola } from 'consola'
 import type { NodeChange, Paint } from '../multiplayer/codec.ts'
 import { parseColor } from '../color.ts'
-import { isVariable, resolveVariable, type FigmaVariable } from './vars.ts'
+import { isVariable, resolveVariable } from './vars.ts'
 import { getComponentRegistry } from './components.tsx'
 import { normalizeStyle, type StyleProps } from './shorthands.ts'
 import {

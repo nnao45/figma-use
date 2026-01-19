@@ -51,7 +51,7 @@ async function createNodeFast(
     width,
     height,
     name,
-    parentId,
+    _parentId,
     fill,
     stroke,
     strokeWeight,
@@ -496,7 +496,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
 
     // ==================== CREATE SHAPES ====================
     case 'create-rectangle': {
-      const { x, y, width, height, name, parentId, fill, stroke, strokeWeight, radius, opacity } =
+      const { x, y, width, height, name, _parentId, fill, stroke, strokeWeight, radius, opacity } =
         args as {
           x: number
           y: number
@@ -525,7 +525,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
     }
 
     case 'create-ellipse': {
-      const { x, y, width, height, name, parentId, fill, stroke, strokeWeight, opacity } = args as {
+      const { x, y, width, height, name, _parentId, fill, stroke, strokeWeight, opacity } = args as {
         x: number
         y: number
         width: number
@@ -551,7 +551,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
     }
 
     case 'create-line': {
-      const { x, y, length, rotation, name, parentId, stroke, strokeWeight } = args as {
+      const { x, y, length, rotation, name, _parentId, stroke, strokeWeight } = args as {
         x: number
         y: number
         length: number
@@ -637,7 +637,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
         width,
         height,
         name,
-        parentId,
+        _parentId,
         fill,
         stroke,
         strokeWeight,
@@ -768,7 +768,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
     }
 
     case 'create-component': {
-      const { name, parentId, x, y, width, height, fill } = args as { 
+      const { name, _parentId, x, y, width, height, fill } = args as { 
         name: string
         parentId?: string
         x?: number
@@ -1070,7 +1070,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
     }
 
     case 'import-svg': {
-      const { svg, x, y, name, parentId, noFill } = args as {
+      const { svg, x, y, name, _parentId, noFill } = args as {
         svg: string
         x?: number
         y?: number

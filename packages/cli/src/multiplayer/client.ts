@@ -16,9 +16,9 @@ import {
   skipFigWireHeader,
   isKiwiMessage,
   getKiwiMessageType,
-  parseVarint,
-  KIWI,
-  SESSION_ID
+  
+  
+  
 } from './protocol.ts'
 import {
   initCodec,

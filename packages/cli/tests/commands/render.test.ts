@@ -1,7 +1,7 @@
 /**
  * Render tests using proxy connection pooling
  */
-import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
+import { describe, test, expect, beforeAll } from 'bun:test'
 import * as React from 'react'
 import { run } from '../helpers.ts'
 import { renderToNodeChanges } from '../../src/render/index.ts'

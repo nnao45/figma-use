@@ -20,7 +20,6 @@
  * ```
  */
 
-import { parseColor } from '../color.ts'
 
 const VAR_SYMBOL = Symbol.for('figma.variable')
 

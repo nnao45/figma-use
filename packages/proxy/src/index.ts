@@ -2,11 +2,11 @@ import { Elysia } from 'elysia'
 import { consola } from 'consola'
 import { z } from 'zod'
 import type { JSONRPCRequest, JSONRPCResponse } from '@modelcontextprotocol/sdk/types.js'
-import { getTools, getToolByName, type ToolDef } from '../../mcp/src/index.ts'
+import { getTools, getToolByName } from '../../mcp/src/index.ts'
 import {
   getMultiplayerConnection,
   getConnectionStatus,
-  closeAllConnections,
+  
   type NodeChange
 } from './multiplayer.ts'
 
@@ -55,7 +55,7 @@ async function executeCommand<T = unknown>(
 
 const mcpSessions = new Map<string, { initialized: boolean }>()
 
-async function handleMcpRequest(req: JSONRPCRequest, sessionId?: string): Promise<JSONRPCResponse> {
+async function handleMcpRequest(req: JSONRPCRequest, _sessionId?: string): Promise<JSONRPCResponse> {
   const { id, method, params } = req
 
   try {
@@ -247,7 +247,7 @@ new Elysia()
     multiplayer: getConnectionStatus()
   }))
   .post('/render', async ({ body }) => {
-    const { fileKey, nodeChanges, parentGUID } = body as {
+    const { fileKey, nodeChanges } = body as {
       fileKey: string
       nodeChanges: NodeChange[]
       parentGUID?: { sessionID: number; localID: number }

@@ -1,7 +1,6 @@
 import { defineCommand } from 'citty'
 import { ok, fail } from '../format.ts'
 import { spawn } from 'child_process'
-import { resolve } from 'path'
 import type { ChromeDevToolsTarget } from '../types.ts'
 
 export default defineCommand({

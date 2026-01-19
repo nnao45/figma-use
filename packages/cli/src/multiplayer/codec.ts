@@ -7,7 +7,7 @@
  */
 
 import { compileSchema, type Schema } from 'kiwi-schema'
-import { isZstdCompressed, isKiwiMessage, getKiwiMessageType } from './protocol.ts'
+import { isZstdCompressed, getKiwiMessageType } from './protocol.ts'
 import { parseColor } from '../color.ts'
 import figmaSchema from './schema.ts'
 

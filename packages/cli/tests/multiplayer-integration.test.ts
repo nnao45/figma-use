@@ -7,7 +7,7 @@ import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
 import {
   FigmaMultiplayerClient,
   getCookiesFromDevTools,
-  parseFileKey,
+  
   initCodec,
   createNodeChange,
   type NodeChange

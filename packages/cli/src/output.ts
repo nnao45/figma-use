@@ -1,6 +1,6 @@
 import type { FigmaNode, FigmaPage, DeletedResult, ExportResult, StatusResult } from './types.ts'
 import {
-  TYPE_LABELS,
+  
   formatFill,
   formatStroke,
   formatBox,
