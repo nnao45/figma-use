@@ -255,7 +255,9 @@ curl -o ~/.claude/skills/figma-use/SKILL.md \
 
 ## MCP Server
 
-The proxy exposes an MCP endpoint at `http://localhost:38451/mcp`. Run `figma-use mcp` for config.
+The proxy exposes an MCP endpoint at `http://localhost:38451/mcp` with 90+ tools. Run `figma-use mcp` for config.
+
+See [MCP.md](./MCP.md) for full documentation.
 
 ## How It Works
 
