@@ -8,6 +8,7 @@ describe('diff', () => {
 
   beforeAll(async () => {
     await setupTestPage('diff')
+    // This setup makes 11+ CLI calls, needs more time
 
     // Create container frame
     const container = (await run(
@@ -61,7 +62,7 @@ describe('diff', () => {
       await run(`node resize ${modifiedGreenBox.id} --width 80 --height 80`)
       trackNode(modifiedGreenBox.id)
     }
-  })
+  }, 60000) // 60s timeout for setup
 
   afterAll(async () => {
     await teardownTestPage()

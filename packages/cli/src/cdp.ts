@@ -42,8 +42,6 @@ async function getWebSocket(): Promise<WebSocket> {
     const ws = new WebSocket(target.webSocketDebuggerUrl)
     ws.on('open', () => {
       cachedWs = ws
-      // Don't keep process alive just for this connection
-      if (ws._socket) (ws._socket as any).unref()
       resolve(ws)
     })
     ws.on('error', reject)
@@ -54,43 +52,46 @@ export async function cdpEval<T>(code: string, timeout = 30000): Promise<T> {
   const ws = await getWebSocket()
   const id = ++messageId
 
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error('CDP timeout'))
-    }, timeout)
-
-    const handler = (data: Buffer) => {
-      const msg = JSON.parse(data.toString())
-      if (msg.id === id) {
-        clearTimeout(timer)
+  try {
+    return await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
         ws.off('message', handler)
+        reject(new Error('CDP timeout'))
+      }, timeout)
 
-        // Close connection immediately
-        closeCDP()
+      const handler = (data: Buffer) => {
+        const msg = JSON.parse(data.toString())
+        if (msg.id === id) {
+          clearTimeout(timer)
+          ws.off('message', handler)
 
-        if (msg.result?.exceptionDetails) {
-          const err = msg.result.exceptionDetails
-          reject(new Error(err.exception?.description || err.text || 'CDP error'))
-        } else {
-          resolve(msg.result?.result?.value as T)
+          if (msg.result?.exceptionDetails) {
+            const err = msg.result.exceptionDetails
+            reject(new Error(err.exception?.description || err.text || 'CDP error'))
+          } else {
+            resolve(msg.result?.result?.value as T)
+          }
         }
       }
-    }
 
-    ws.on('message', handler)
+      ws.on('message', handler)
 
-    ws.send(
-      JSON.stringify({
-        id,
-        method: 'Runtime.evaluate',
-        params: {
-          expression: code,
-          awaitPromise: true,
-          returnByValue: true
-        }
-      })
-    )
-  })
+      ws.send(
+        JSON.stringify({
+          id,
+          method: 'Runtime.evaluate',
+          params: {
+            expression: code,
+            awaitPromise: true,
+            returnByValue: true
+          }
+        })
+      )
+    })
+  } finally {
+    // Close after each request to allow process exit
+    closeCDP()
+  }
 }
 
 export function getFileKeyFromUrl(url: string): string {

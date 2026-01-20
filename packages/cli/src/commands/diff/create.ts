@@ -47,11 +47,9 @@ export default defineCommand({
     try {
       const depth = args.depth ? Number(args.depth) : 10
 
-      // Get both trees
-      const [fromTree, toTree] = await Promise.all([
-        sendCommand('get-node-tree', { id: args.from, depth }) as Promise<NodeInfo>,
-        sendCommand('get-node-tree', { id: args.to, depth }) as Promise<NodeInfo>
-      ])
+      // Get both trees (sequential to avoid WebSocket issues)
+      const fromTree = await sendCommand('get-node-tree', { id: args.from, depth }) as NodeInfo
+      const toTree = await sendCommand('get-node-tree', { id: args.to, depth }) as NodeInfo
 
       if (!fromTree || !toTree) {
         console.error(fail('Could not fetch node trees'))
