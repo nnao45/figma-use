@@ -17,6 +17,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`query` command** — XPath selectors for finding nodes (powered by fontoxpath)
+  ```bash
+  figma-use query "//FRAME"                              # All frames
+  figma-use query "//FRAME[@width < 300]"                # Frames narrower than 300px  
+  figma-use query "//COMPONENT[starts-with(@name, 'Button')]"  # Name starts with
+  figma-use query "//FRAME[contains(@name, 'Card')]"     # Name contains
+  figma-use query "//SECTION/FRAME"                      # Direct children
+  figma-use query "//SECTION//TEXT"                      # All descendants
+  figma-use query "//*[@cornerRadius > 0]"               # Any node with radius
+  ```
+  Full XPath 3.1 support: axes, predicates, functions, arithmetic
+
+- **Multi-file support** — proxy now supports multiple simultaneous plugin connections
+  - Each plugin instance registers with fileKey and fileName
+  - `file list` — show all connected files
+  - `file select <name>` — switch active file (partial match supported)
+  - `status` shows all connected files with active marker
+  
+- **Connector commands** — work with connector lines
+  - `connector list` — list connectors on current page
+  - `connector get <id>` — get connector details (endpoints, stroke, line type)
+  - `connector set <id>` — update connector properties (stroke, weight, line type, caps)
+  - `connector create` — create connector (FigJam only, Figma API limitation)
+
+- **`figma_render` MCP tool** — render JSX via MCP protocol
+
+- **MCP.md** — documentation for Model Context Protocol integration
+
+### Changed
+
+- Extracted `transformJsxSnippet` to separate module for reuse
+
+### Fixed
+
+- `@dannote/figma-use/render` — missing `color.ts` in published package
+- Proxy connection cleanup on plugin disconnect
+
+## [0.7.1] - 2026-01-19
+
+### Changed
+
+- SKILL.md rewritten — structure like README, compact best practices
+- `render --examples` updated — added Icon, shorthands, `--x`/`--y` examples
+- README: added visual diff example with images
+
+## [0.7.0] - 2026-01-19
+
+### Changed
+
+- README rewritten — focused on concepts, moved command list to REFERENCE.md
+- Added REFERENCE.md with full list of 100+ commands
+
+### Added
+
 - **`page current`** — show current page name and ID
   ```bash
   figma-use page current         # Page 1 (0:1)

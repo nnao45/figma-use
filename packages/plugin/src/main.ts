@@ -1,4 +1,5 @@
 import svgpath from 'svgpath'
+import { queryNodes } from './query.ts'
 
 console.log('[Figma Bridge] Plugin main loaded at', new Date().toISOString())
 
@@ -196,7 +197,16 @@ const NEEDS_ALL_PAGES = new Set([
 
 let allPagesLoaded = false
 
-figma.ui.onmessage = async (msg: { type: string; id: string; command: string; args?: unknown }) => {
+figma.ui.onmessage = async (msg: { type: string; id?: string; command?: string; args?: unknown }) => {
+  // Handle file info request
+  if (msg.type === 'get-file-info') {
+    // sessionID is unique per open file
+    const sessionId = figma.currentPage.id.split(':')[0]
+    const fileName = figma.root.name
+    figma.ui.postMessage({ type: 'file-info', sessionId, fileName })
+    return
+  }
+
   if (msg.type !== 'command') return
 
   try {
@@ -1817,6 +1827,33 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       return { updated: true, paths: newPaths }
     }
 
+    // ==================== QUERY ====================
+    case 'query': {
+      const { selector, rootId, select, limit } = args as {
+        selector: string
+        rootId?: string
+        select?: string[]
+        limit?: number
+      }
+      const root = rootId
+        ? await figma.getNodeByIdAsync(rootId)
+        : figma.currentPage
+      if (!root) return { error: 'Root node not found' }
+
+      const nodes = queryNodes(selector, root, { limit: limit ?? 1000 })
+      const fields = select || ['id', 'name', 'type']
+
+      return nodes.map(node => {
+        const result: Record<string, unknown> = {}
+        for (const field of fields) {
+          if (field in node) {
+            result[field] = (node as unknown as Record<string, unknown>)[field]
+          }
+        }
+        return result
+      })
+    }
+
     // ==================== EVAL ====================
     case 'eval': {
       const { code } = args as { code: string }
@@ -2085,6 +2122,198 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       if (!collection) throw new Error('Collection not found')
       collection.remove()
       return { deleted: true }
+    }
+
+    // ==================== CONNECTORS ====================
+    case 'create-connector': {
+      const { fromId, toId, fromMagnet, toMagnet, lineType, startCap, endCap, stroke, strokeWeight, cornerRadius } = args as {
+        fromId: string
+        toId: string
+        fromMagnet?: string
+        toMagnet?: string
+        lineType?: 'STRAIGHT' | 'ELBOWED' | 'CURVED'
+        startCap?: string
+        endCap?: string
+        stroke?: string
+        strokeWeight?: number
+        cornerRadius?: number
+      }
+
+      const fromNode = await figma.getNodeByIdAsync(fromId)
+      const toNode = await figma.getNodeByIdAsync(toId)
+      if (!fromNode || !('absoluteBoundingBox' in fromNode)) throw new Error('From node not found or invalid')
+      if (!toNode || !('absoluteBoundingBox' in toNode)) throw new Error('To node not found or invalid')
+
+      const connector = figma.createConnector()
+      connector.connectorStart = {
+        endpointNodeId: fromId,
+        magnet: (fromMagnet as ConnectorMagnet) || 'AUTO'
+      }
+      connector.connectorEnd = {
+        endpointNodeId: toId,
+        magnet: (toMagnet as ConnectorMagnet) || 'AUTO'
+      }
+
+      if (lineType) connector.connectorLineType = lineType
+      if (startCap) connector.connectorStartStrokeCap = startCap as ConnectorStrokeCap
+      if (endCap) connector.connectorEndStrokeCap = endCap as ConnectorStrokeCap
+      if (cornerRadius !== undefined) connector.cornerRadius = cornerRadius
+      if (strokeWeight !== undefined) connector.strokeWeight = strokeWeight
+      if (stroke) {
+        const hex = stroke.replace('#', '')
+        const r = parseInt(hex.slice(0, 2), 16) / 255
+        const g = parseInt(hex.slice(2, 4), 16) / 255
+        const b = parseInt(hex.slice(4, 6), 16) / 255
+        connector.strokes = [{ type: 'SOLID', color: { r, g, b } }]
+      }
+
+      return serializeNode(connector)
+    }
+
+    case 'get-connector': {
+      const { id } = args as { id: string }
+      const node = await figma.getNodeByIdAsync(id)
+      if (!node || node.type !== 'CONNECTOR') throw new Error('Connector not found')
+
+      const connector = node as ConnectorNode
+      const fromNode = await figma.getNodeByIdAsync(connector.connectorStart.endpointNodeId)
+      const toNode = await figma.getNodeByIdAsync(connector.connectorEnd.endpointNodeId)
+
+      const stroke = connector.strokes[0]
+      const strokeHex = stroke && stroke.type === 'SOLID'
+        ? '#' + [stroke.color.r, stroke.color.g, stroke.color.b].map(c => Math.round(c * 255).toString(16).padStart(2, '0')).join('').toUpperCase()
+        : undefined
+
+      return {
+        id: connector.id,
+        name: connector.name,
+        fromNode: {
+          id: connector.connectorStart.endpointNodeId,
+          name: fromNode?.name || 'Unknown',
+          magnet: connector.connectorStart.magnet
+        },
+        toNode: {
+          id: connector.connectorEnd.endpointNodeId,
+          name: toNode?.name || 'Unknown',
+          magnet: connector.connectorEnd.magnet
+        },
+        lineType: connector.connectorLineType,
+        startCap: connector.connectorStartStrokeCap,
+        endCap: connector.connectorEndStrokeCap,
+        stroke: strokeHex,
+        strokeWeight: connector.strokeWeight,
+        cornerRadius: connector.cornerRadius
+      }
+    }
+
+    case 'set-connector': {
+      const { id, fromId, toId, fromMagnet, toMagnet, lineType, startCap, endCap, stroke, strokeWeight, cornerRadius } = args as {
+        id: string
+        fromId?: string
+        toId?: string
+        fromMagnet?: string
+        toMagnet?: string
+        lineType?: 'STRAIGHT' | 'ELBOWED' | 'CURVED'
+        startCap?: string
+        endCap?: string
+        stroke?: string
+        strokeWeight?: number
+        cornerRadius?: number
+      }
+
+      const node = await figma.getNodeByIdAsync(id)
+      if (!node || node.type !== 'CONNECTOR') throw new Error('Connector not found')
+
+      const connector = node as ConnectorNode
+
+      if (fromId) {
+        connector.connectorStart = {
+          endpointNodeId: fromId,
+          magnet: (fromMagnet as ConnectorMagnet) || connector.connectorStart.magnet
+        }
+      } else if (fromMagnet) {
+        connector.connectorStart = {
+          ...connector.connectorStart,
+          magnet: fromMagnet as ConnectorMagnet
+        }
+      }
+
+      if (toId) {
+        connector.connectorEnd = {
+          endpointNodeId: toId,
+          magnet: (toMagnet as ConnectorMagnet) || connector.connectorEnd.magnet
+        }
+      } else if (toMagnet) {
+        connector.connectorEnd = {
+          ...connector.connectorEnd,
+          magnet: toMagnet as ConnectorMagnet
+        }
+      }
+
+      if (lineType) connector.connectorLineType = lineType
+      if (startCap) connector.connectorStartStrokeCap = startCap as ConnectorStrokeCap
+      if (endCap) connector.connectorEndStrokeCap = endCap as ConnectorStrokeCap
+      if (cornerRadius !== undefined) connector.cornerRadius = cornerRadius
+      if (strokeWeight !== undefined) connector.strokeWeight = strokeWeight
+      if (stroke) {
+        const hex = stroke.replace('#', '')
+        const r = parseInt(hex.slice(0, 2), 16) / 255
+        const g = parseInt(hex.slice(2, 4), 16) / 255
+        const b = parseInt(hex.slice(4, 6), 16) / 255
+        connector.strokes = [{ type: 'SOLID', color: { r, g, b } }]
+      }
+
+      return serializeNode(connector)
+    }
+
+    case 'list-connectors': {
+      const { fromId, toId } = args as { fromId?: string; toId?: string }
+      const page = figma.currentPage
+      const connectors: ConnectorNode[] = []
+
+      function findConnectors(node: BaseNode) {
+        if (node.type === 'CONNECTOR') {
+          const c = node as ConnectorNode
+          if (fromId && c.connectorStart.endpointNodeId !== fromId) return
+          if (toId && c.connectorEnd.endpointNodeId !== toId) return
+          connectors.push(c)
+        }
+        if ('children' in node) {
+          for (const child of (node as ChildrenMixin).children) {
+            findConnectors(child)
+          }
+        }
+      }
+
+      findConnectors(page)
+
+      const results = await Promise.all(connectors.map(async (c) => {
+        const fromNode = await figma.getNodeByIdAsync(c.connectorStart.endpointNodeId)
+        const toNode = await figma.getNodeByIdAsync(c.connectorEnd.endpointNodeId)
+        const stroke = c.strokes[0]
+        const strokeHex = stroke && stroke.type === 'SOLID'
+          ? '#' + [stroke.color.r, stroke.color.g, stroke.color.b].map(v => Math.round(v * 255).toString(16).padStart(2, '0')).join('').toUpperCase()
+          : undefined
+
+        return {
+          id: c.id,
+          name: c.name,
+          fromNode: {
+            id: c.connectorStart.endpointNodeId,
+            name: fromNode?.name || 'Unknown',
+            magnet: c.connectorStart.magnet
+          },
+          toNode: {
+            id: c.connectorEnd.endpointNodeId,
+            name: toNode?.name || 'Unknown',
+            magnet: c.connectorEnd.magnet
+          },
+          lineType: c.connectorLineType,
+          stroke: strokeHex
+        }
+      }))
+
+      return results
     }
 
     default:
