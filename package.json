@@ -12,12 +12,10 @@
     "./components": "./packages/cli/src/render/components.tsx"
   },
   "scripts": {
-    "build": "bun run build:plugin && bun run build:rpc-bundle && bun run build:proxy && bun run build:cli",
-    "build:proxy": "bun build packages/proxy/src/index.ts --outdir dist/proxy --target bun",
+    "build": "bun run build:plugin && bun run build:rpc-bundle && bun run build:cli",
     "build:cli": "bun build packages/cli/src/index.ts --outdir dist/cli --target bun",
     "build:plugin": "cd packages/plugin && bun run build",
     "build:rpc-bundle": "bun run scripts/build-rpc-bundle.ts",
-    "dev": "bun run packages/proxy/src/index.ts",
     "test": "cd packages/cli && bun test",
     "lint": "oxlint packages/",
     "format": "oxfmt --write packages/",
@@ -54,8 +52,7 @@
   "homepage": "https://github.com/dannote/figma-use#readme",
   "dependencies": {
     "citty": "^0.1.6",
-    "consola": "^3.4.2",
-    "elysia": "^1.2.25"
+    "consola": "^3.4.2"
   },
   "devDependencies": {
     "@iconify/core": "^4.1.0",
@@ -65,7 +62,6 @@
     "@types/pngjs": "^6.0.5",
     "@types/ws": "^8.18.1",
     "esbuild": "^0.25.4",
-    "kiwi-schema": "^0.5.0",
     "oxfmt": "^0.24.0",
     "oxlint": "^1.39.0",
     "pixelmatch": "^7.1.0",
