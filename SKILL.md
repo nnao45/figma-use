@@ -13,9 +13,9 @@ figma-use create frame --width 400 --height 300 --fill "#FFF" --layout VERTICAL 
 figma-use create icon mdi:home --size 32 --color "#3B82F6"
 figma-use set fill 1:23 "$Colors/Primary"
 
-# JSX
-echo '<Frame style={{p: 24, bg: "#3B82F6", rounded: 12}}>
-  <Text style={{size: 18, color: "#FFF"}}>Hello</Text>
+# JSX (props directly on elements, NOT style={{}})
+echo '<Frame p={24} bg="#3B82F6" rounded={12}>
+  <Text size={18} color="#FFF">Hello</Text>
 </Frame>' | figma-use render --stdin --x 100 --y 100
 ```
 
@@ -51,9 +51,9 @@ figma-use node move <id> --x 100 --y 200
 
 **Declarative** — render JSX trees:
 ```bash
-echo '<Frame style={{p: 24, gap: 16, flex: "col", bg: "#FFF", rounded: 12}}>
-  <Text style={{size: 24, weight: "bold", color: "#000"}}>Title</Text>
-  <Text style={{size: 14, color: "#666"}}>Description</Text>
+echo '<Frame p={24} gap={16} flex="col" bg="#FFF" rounded={12}>
+  <Text size={24} weight="bold" color="#000">Title</Text>
+  <Text size={14} color="#666">Description</Text>
 </Frame>' | figma-use render --stdin --x 100 --y 200
 ```
 
@@ -62,9 +62,18 @@ stdin supports both pure JSX and full module syntax with imports:
 ```tsx
 import { Frame, Text, defineComponent } from 'figma-use/render'
 
-const Button = defineComponent('Button', <Frame bg="#3B82F6" p={12} rounded={6}><Text color="#FFF">Click</Text></Frame>)
+const Button = defineComponent('Button', 
+  <Frame bg="#3B82F6" p={12} rounded={6}>
+    <Text color="#FFF">Click</Text>
+  </Frame>
+)
 
-export default () => <Frame flex="row" gap={8}><Button /><Button /></Frame>
+export default () => (
+  <Frame flex="row" gap={8}>
+    <Button />
+    <Button />
+  </Frame>
+)
 ```
 
 **Elements:** `Frame`, `Rectangle`, `Ellipse`, `Text`, `Line`, `Star`, `Polygon`, `Vector`, `Group`, `Icon`, `Image`
@@ -83,7 +92,7 @@ figma-use create icon heroicons:bell-solid --component  # as Figma component
 
 In JSX:
 ```tsx
-<Icon icon="mdi:home" size={24} color="#3B82F6" />
+<Icon name="mdi:home" size={24} color="#3B82F6" />
 ```
 
 ## Images
@@ -127,12 +136,18 @@ figma-use create rect --width 100 --height 100 --fill 'var:Colors/Primary'
 figma-use set fill <id> '$Brand/Accent'
 ```
 
+In JSX:
+```tsx
+<Frame bg="$Colors/Primary" />
+<Text color="var:Text/Primary">Hello</Text>
+```
+
 ## Style Shorthands
 
 | Short | Full | Values |
 |-------|------|--------|
 | `w`, `h` | width, height | number |
-| `bg` | backgroundColor | hex |
+| `bg` | backgroundColor | hex or `$Variable` |
 | `rounded` | borderRadius | number |
 | `p`, `px`, `py` | padding | number |
 | `flex` | flexDirection | `"row"`, `"col"` |
@@ -148,7 +163,7 @@ figma-use set fill <id> '$Brand/Accent'
 | `font` | fontFamily | string |
 | `pt`, `pr`, `pb`, `pl` | padding sides | number |
 
-Also: `gap`, `opacity`, `color`, `borderColor`, `borderWidth`, `textAlign`, `x`, `y`
+Also: `gap`, `opacity`, `color`, `stroke`, `strokeWidth`, `textAlign`, `x`, `y`
 
 ## Components (via .figma.tsx)
 
@@ -158,13 +173,13 @@ First call creates master, rest create instances:
 import { defineComponent, Frame, Text } from 'figma-use/render'
 
 const Card = defineComponent('Card',
-  <Frame style={{ p: 24, bg: '#FFF', rounded: 12 }}>
-    <Text style={{ size: 18, color: '#000' }}>Card</Text>
+  <Frame p={24} bg="#FFF" rounded={12}>
+    <Text size={18} color="#000">Card</Text>
   </Frame>
 )
 
 export default () => (
-  <Frame style={{ gap: 16, flex: 'row' }}>
+  <Frame gap={16} flex="row">
     <Card />
     <Card />
   </Frame>
@@ -185,12 +200,12 @@ const Button = defineComponentSet('Button', {
   variant: ['Primary', 'Secondary'] as const,
   size: ['Small', 'Large'] as const,
 }, ({ variant, size }) => (
-  <Frame style={{
-    p: size === 'Large' ? 16 : 8,
-    bg: variant === 'Primary' ? '#3B82F6' : '#E5E7EB',
-    rounded: 8,
-  }}>
-    <Text style={{ color: variant === 'Primary' ? '#FFF' : '#111' }}>
+  <Frame
+    p={size === 'Large' ? 16 : 8}
+    bg={variant === 'Primary' ? '#3B82F6' : '#E5E7EB'}
+    rounded={8}
+  >
+    <Text color={variant === 'Primary' ? '#FFF' : '#111'}>
       {variant} {size}
     </Text>
   </Frame>
@@ -344,10 +359,10 @@ figma-use set text "I123:456;789:10" "New text"  # I<instance>;<internal>
 ### Row layout needs width
 ```bash
 # ❌ Collapses to 1×1
-<Frame style={{flex: "row", gap: 8}}>
+<Frame flex="row" gap={8}>
 
 # ✅ Explicit width
-<Frame style={{w: 300, flex: "row", gap: 8}}>
+<Frame w={300} flex="row" gap={8}>
 ```
 
 ### Sections
