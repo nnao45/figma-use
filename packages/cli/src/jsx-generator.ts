@@ -401,9 +401,16 @@ export async function formatCode(code: string, options: FormatOptions = {}): Pro
       singleQuote: options.singleQuote ?? true,
       tabWidth: options.tabWidth ?? 2,
       useTabs: options.useTabs ?? false,
-      trailingComma: options.trailingComma ?? 'es5'
+      trailingComma: options.trailingComma ?? 'es5',
+      printWidth: options.printWidth ?? 100
     })
-    return result.code
+    let formatted = result.code
+    // Add blank lines for better readability
+    formatted = formatted.replace(/^(import .+\n)(?!import)/m, '$1\n')
+    formatted = formatted.replace(/^(export default \w+)\n(?!\n)/m, '$1\n\n')
+    formatted = formatted.replace(/^(type Story = .+)\n(?!\n)/m, '$1\n\n')
+    formatted = formatted.replace(/^(}\n)(export const)/gm, '$1\n$2')
+    return formatted
   } catch (e: unknown) {
     if ((e as NodeJS.ErrnoException).code === 'ERR_MODULE_NOT_FOUND') {
       console.error(`oxfmt is required. Install it:\n\n  ${installHint('oxfmt')}\n`)
