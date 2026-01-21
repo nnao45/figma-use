@@ -1,6 +1,6 @@
 {
   "name": "figma-use",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Control Figma from the command line. Full read/write access for AI agents.",
   "type": "module",
   "bin": {
@@ -51,7 +51,9 @@
   "dependencies": {
     "citty": "^0.1.6",
     "consola": "^3.4.2",
-    "esbuild": "^0.25.4"
+    "esbuild": "^0.25.4",
+    "fontoxpath": "^3.34.0",
+    "svgpath": "^2.6.0"
   },
   "devDependencies": {
     "@iconify/core": "^4.1.0",
