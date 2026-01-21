@@ -77,10 +77,10 @@ function isLikelyIcon(node: FigmaNode): boolean {
   // Is SVG type
   if (!SVG_TYPES.has(node.type)) return false
 
-  // Reasonable icon size (8-128px)
+  // Reasonable icon size (4-128px)
   const w = node.width ?? 0
   const h = node.height ?? 0
-  if (w < 8 || w > 128 || h < 8 || h > 128) return false
+  if (w < 4 || w > 128 || h < 4 || h > 128) return false
 
   // Roughly square
   const ratio = Math.max(w, h) / Math.min(w, h)
@@ -102,9 +102,14 @@ export async function matchIconsInTree(
   async function processNode(n: FigmaNode): Promise<void> {
     if (isLikelyIcon(n)) {
       try {
-        const result = await sendCommand<{ svg: string }>('export-node-svg', { id: n.id })
-        if (result?.svg) {
-          const match = await matchIcon(result.svg, {
+        // Use existing svgData if available, otherwise fetch
+        let svg = n.svgData
+        if (!svg) {
+          const result = await sendCommand<{ svg: string }>('export-node-svg', { id: n.id })
+          svg = result?.svg
+        }
+        if (svg) {
+          const match = await matchIcon(svg, {
             threshold: options.threshold,
             prefer: options.prefer
           })
