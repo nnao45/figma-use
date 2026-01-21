@@ -2172,6 +2172,10 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
 
     // ==================== CONNECTORS ====================
     case 'create-connector': {
+      if (figma.editorType !== 'figjam') {
+        throw new Error('Connectors can only be created in FigJam files. Open a FigJam file and try again.')
+      }
+
       const { fromId, toId, fromMagnet, toMagnet, lineType, startCap, endCap, stroke, strokeWeight, cornerRadius } = args as {
         fromId: string
         toId: string
