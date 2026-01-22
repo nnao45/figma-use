@@ -5,6 +5,7 @@ import * as ts from 'typescript'
 
 import { closeCDP } from '../../cdp.ts'
 import { sendCommand, handleError } from '../../client.ts'
+import { loadConfig, mergeWithDefaults } from '../../config.ts'
 import { writeFontsCss } from '../../fonts.ts'
 import { ok, fail } from '../../format.ts'
 import { matchIconsInTree } from '../../icon-matcher.ts'
@@ -1004,15 +1005,21 @@ export default defineCommand({
   },
   async run({ args }) {
     try {
-      const frameworkName = args.framework || 'react'
+      // Load config and merge with defaults
+      const fileConfig = loadConfig()
+      const config = mergeWithDefaults(fileConfig)
+
+      // CLI args override config (explicit args take precedence)
+      const frameworkName = args.framework || config.storybook.framework
       const framework = FRAMEWORKS[frameworkName]
       if (!framework) {
         console.error(`Unknown framework: ${frameworkName}. Available: ${Object.keys(FRAMEWORKS).join(', ')}`)
         process.exit(1)
       }
 
-      if (args.page) {
-        await sendCommand('set-current-page', { name: args.page })
+      const page = args.page || config.storybook.page
+      if (page) {
+        await sendCommand('set-current-page', { page })
       }
 
       const components = await sendCommand<ComponentInfo[]>('get-all-components', { limit: 1000 })
@@ -1021,22 +1028,31 @@ export default defineCommand({
         return
       }
 
-      const outDir = args.out
+      const outDir = args.out !== './stories' ? args.out : (config.storybook.out || './stories')
       if (!existsSync(outDir)) {
         mkdirSync(outDir, { recursive: true })
       }
 
       const formatOptions: FormatOptions = {
-        semi: args.semi,
-        singleQuote: args['single-quote'] !== false,
-        tabWidth: args['tab-width'] ? Number(args['tab-width']) : undefined,
-        useTabs: args.tabs
+        semi: args.semi ?? config.format.semi,
+        singleQuote: args['single-quote'] ?? config.format.singleQuote ?? true,
+        tabWidth: args['tab-width'] ? Number(args['tab-width']) : config.format.tabWidth,
+        useTabs: args.tabs ?? config.format.tabs
       }
 
+      // CLI args override config for storybook-specific settings
+      const matchIcons = args['match-icons'] ?? config.storybook.matchIcons
+      const iconThreshold = args['icon-threshold']
+        ? parseFloat(args['icon-threshold'])
+        : config.storybook.iconThreshold ?? 0.85
+      const preferIcons = args['prefer-icons']
+        ? args['prefer-icons'].split(',').map((s: string) => s.trim())
+        : config.storybook.preferIcons
+
       const processOptions: ProcessOptions = {
-        matchIcons: !!args['match-icons'],
-        iconThreshold: args['icon-threshold'] ? parseFloat(args['icon-threshold']) : 0.9,
-        preferIcons: args['prefer-icons']?.split(',').map((s) => s.trim()),
+        matchIcons: !!matchIcons,
+        iconThreshold,
+        preferIcons,
         verbose: !!args.verbose
       }
 

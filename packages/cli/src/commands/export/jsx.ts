@@ -1,6 +1,7 @@
 import { defineCommand } from 'citty'
 
 import { sendCommand, handleError } from '../../client.ts'
+import { loadConfig, mergeWithDefaults } from '../../config.ts'
 import { matchIconsInTree } from '../../icon-matcher.ts'
 import {
   enrichWithSvgData,
@@ -29,6 +30,10 @@ export default defineCommand({
   },
   async run({ args }) {
     try {
+      // Load config
+      const fileConfig = loadConfig()
+      const config = mergeWithDefaults(fileConfig)
+
       const node = await sendCommand<FigmaNode>('get-node-tree', {
         id: args.id
       })
@@ -40,9 +45,15 @@ export default defineCommand({
 
       await enrichWithSvgData(node)
 
-      if (args['match-icons']) {
-        const threshold = args['icon-threshold'] ? parseFloat(args['icon-threshold']) : 0.9
-        const prefer = args['prefer-icons']?.split(',').map((s) => s.trim())
+      // Use config values if CLI args not provided
+      const matchIcons = args['match-icons'] ?? config.storybook.matchIcons
+      if (matchIcons) {
+        const threshold = args['icon-threshold']
+          ? parseFloat(args['icon-threshold'])
+          : config.storybook.iconThreshold ?? 0.85
+        const prefer = args['prefer-icons']
+          ? args['prefer-icons'].split(',').map((s: string) => s.trim())
+          : config.storybook.preferIcons
 
         const matchCount = await matchIconsInTree(node, {
           threshold,
@@ -62,13 +73,14 @@ export default defineCommand({
       const componentName = args.name || toComponentName(node.name)
       let code = generateCode(node, componentName)
 
-      if (args.pretty) {
+      const shouldFormat = args.pretty ?? config.format.pretty
+      if (shouldFormat) {
         code = await formatCode(code, {
-          semi: args.semi,
-          singleQuote: args['single-quote'] !== false,
-          tabWidth: args['tab-width'] ? Number(args['tab-width']) : undefined,
-          useTabs: args.tabs,
-          trailingComma: args['trailing-comma'] as FormatOptions['trailingComma']
+          semi: args.semi ?? config.format.semi,
+          singleQuote: args['single-quote'] ?? config.format.singleQuote ?? true,
+          tabWidth: args['tab-width'] ? Number(args['tab-width']) : config.format.tabWidth,
+          useTabs: args.tabs ?? config.format.tabs,
+          trailingComma: (args['trailing-comma'] ?? config.format.trailingComma) as FormatOptions['trailingComma']
         })
       }
 

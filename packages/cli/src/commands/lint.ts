@@ -1,5 +1,6 @@
 import { defineCommand } from 'citty'
-import { sendCommand, printResult } from '../client.ts'
+import { sendCommand } from '../client.ts'
+import { loadConfig, mergeWithDefaults } from '../config.ts'
 import {
   createLinter,
   formatReport,
@@ -95,12 +96,17 @@ export default defineCommand({
     const variablesJson = await sendCommand<string>('variable-list', {})
     const variables = JSON.parse(variablesJson) as FigmaVariable[]
 
-    // Parse rules if specified
+    // Load config and merge with CLI args
+    const fileConfig = loadConfig()
+    const config = mergeWithDefaults(fileConfig)
+
+    // CLI args override config
+    const preset = args.preset !== 'recommended' ? args.preset : config.lint.preset
     const rules = args.rule ? (Array.isArray(args.rule) ? args.rule : [args.rule]) : undefined
 
     // Create and run linter
     const linter = createLinter({
-      preset: args.preset,
+      preset,
       rules,
       variables,
     })
