@@ -139,9 +139,32 @@ Export all components on current page as Storybook stories:
 figma-use export storybook                      # Output to ./stories/
 figma-use export storybook --out ./src/stories  # Custom output dir
 figma-use export storybook --match-icons        # Match vectors to Iconify icons
+figma-use export storybook --match-icons --prefer-icons lucide,tabler
 ```
 
-Generates `.stories.tsx` files with variants from ComponentSets.
+Generates `.stories.tsx` files:
+- **ComponentSets** → React component with props + stories with args
+- **VARIANT properties** → Union type props (`variant?: 'Primary' | 'Secondary'`)
+- **TEXT properties** → Editable string props (`label?: string`)
+- Components grouped by `/` prefix → `Button/Primary`, `Button/Secondary` → `Button.stories.tsx`
+
+Example output for Button with variant and label:
+```tsx
+// Button.tsx
+export interface ButtonProps {
+  label?: string
+  variant?: 'Primary' | 'Secondary'
+}
+export function Button({ label, variant }: ButtonProps) {
+  if (variant === 'Primary') return <Frame><Text>{label}</Text></Frame>
+  // ...
+}
+
+// Button.stories.tsx
+export const Primary: StoryObj<typeof Button> = {
+  args: { label: 'Click', variant: 'Primary' }
+}
+```
 
 ## Variables as Tokens
 
@@ -300,6 +323,7 @@ figma-use selection get
 figma-use set fill <id> "#FF0000"
 figma-use set radius <id> 12
 figma-use set text <id> "New text"
+figma-use set text-resize <id> height   # Wrap text (height auto, fixed width)
 figma-use set layout <id> --mode VERTICAL --gap 12 --padding 16
 figma-use set layout <id> --mode GRID --cols "1fr 1fr 1fr" --rows "auto" --gap 16
 figma-use node move <id> --x 100 --y 200

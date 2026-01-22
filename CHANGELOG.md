@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`set text-resize` command** — control text auto-resize mode
+  ```bash
+  figma-use set text-resize <id> height          # Wrap text to width
+  figma-use set text-resize <id> width-and-height # Auto-size both dimensions
+  figma-use set text-resize <id> none            # Fixed size
+  figma-use set text-resize <id> truncate        # Truncate with ellipsis
+  ```
+
+- **TEXT component properties in Storybook export** — editable text props
+  ```tsx
+  // Figma component with TEXT property "label" becomes:
+  export function Button({ label, variant }: ButtonProps) {
+    return <Frame><Text>{label}</Text></Frame>
+  }
+  
+  // Stories get editable args:
+  export const Primary: StoryObj<typeof Button> = {
+    args: { label: 'Click me', variant: 'Primary' }
+  }
+  ```
+
+- **`textAutoResize` in node tree** — shows text resize mode for TEXT nodes
+
+### Changed
+
+- **Improved ComponentSet export** — now combines VARIANT and TEXT properties
+  - VARIANT props control which JSX variant to render
+  - TEXT props become editable string props in the component
+  - Stories include args for both variant selection and text editing
+
 ## [0.10.1] - 2026-01-21
 
 ### Fixed
