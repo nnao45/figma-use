@@ -70,13 +70,15 @@ export default defineCommand({
       return
     }
 
-    // Get node tree from Figma
-    const tree = await sendCommand<FigmaNode>('lint-tree', {
+    // Get node tree from Figma (returned as JSON string due to size limits)
+    const treeJson = await sendCommand<string>('lint-tree', {
       rootId: args.root,
     })
+    const tree = JSON.parse(treeJson) as FigmaNode
 
     // Get variables for suggesting fixes
-    const variables = await sendCommand<FigmaVariable[]>('variable-list', {})
+    const variablesJson = await sendCommand<string>('variable-list', {})
+    const variables = JSON.parse(variablesJson) as FigmaVariable[]
 
     // Parse rules if specified
     const rules = args.rule ? (Array.isArray(args.rule) ? args.rule : [args.rule]) : undefined

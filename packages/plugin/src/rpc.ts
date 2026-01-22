@@ -2960,17 +2960,17 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
         return result
       }
 
-      return serializeForLint(root)
+      return JSON.stringify(serializeForLint(root))
     }
 
     case 'variable-list': {
       const variables = await figma.variables.getLocalVariablesAsync()
-      return variables.map((v) => ({
+      return JSON.stringify(variables.map((v) => ({
         id: v.id,
         name: v.name,
         resolvedType: v.resolvedType,
         valuesByMode: v.valuesByMode
-      }))
+      })))
     }
 
     default:
