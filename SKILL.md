@@ -76,7 +76,15 @@ export default () => (
 )
 ```
 
-**Elements:** `Frame`, `Rectangle`, `Ellipse`, `Text`, `Line`, `Star`, `Polygon`, `Vector`, `Group`, `Icon`, `Image`
+**Elements:** `Frame`, `Rectangle`, `Ellipse`, `Text`, `Line`, `Star`, `Polygon`, `Vector`, `Group`, `Icon`, `Image`, `Instance`
+
+Use `<Instance>` to create component instances:
+```tsx
+<Frame flex="row" gap={8}>
+  <Instance component="59763:10626" />
+  <Instance component="59763:10629" />
+</Frame>
+```
 
 ⚠️ **Always use `--x` and `--y`** to position renders. Don't stack everything at (0, 0).
 
@@ -318,6 +326,12 @@ figma-use query "//FRAME[@name = 'Header']"
 figma-use find --name "Button"
 figma-use find --type FRAME
 figma-use selection get
+
+# Explore
+figma-use node ancestors <id>              # Get parent chain (useful for navigation)
+figma-use node bindings <id>               # Get variable bindings for fills/strokes
+figma-use page bounds                      # Find free space for new objects
+figma-use variable find "Text/Neutral"     # Search variables by name
 
 # Modify
 figma-use set fill <id> "#FF0000"

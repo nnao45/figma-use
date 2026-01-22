@@ -141,4 +141,44 @@ describe('node', () => {
       trackNode(comp.id)
     }
   })
+
+  test('ancestors returns parent chain', async () => {
+    const outer = (await run(
+      'create frame --x 0 --y 600 --width 300 --height 300 --name "Outer" --json'
+    )) as any
+    trackNode(outer.id)
+
+    const inner = (await run(
+      `create frame --x 10 --y 10 --width 100 --height 100 --name "Inner" --parent "${outer.id}" --json`
+    )) as any
+    trackNode(inner.id)
+
+    const rect = (await run(
+      `create rect --x 10 --y 10 --width 50 --height 50 --name "DeepRect" --parent "${inner.id}" --json`
+    )) as any
+    trackNode(rect.id)
+
+    const ancestors = (await run(`node ancestors ${rect.id} --json`)) as any[]
+    expect(ancestors.length).toBeGreaterThanOrEqual(3)
+    expect(ancestors[0].id).toBe(rect.id)
+    expect(ancestors[1].id).toBe(inner.id)
+    expect(ancestors[2].id).toBe(outer.id)
+  })
+
+  test('ancestors respects depth limit', async () => {
+    const ancestors = (await run(`node ancestors ${nodeId} --depth 1 --json`)) as any[]
+    expect(ancestors.length).toBe(1)
+  })
+
+  test('bindings returns empty when no variables', async () => {
+    const rect = (await run(
+      `create rect --x 300 --y 600 --width 50 --height 50 --fill "#FF0000" --json`
+    )) as any
+    trackNode(rect.id)
+
+    const bindings = (await run(`node bindings ${rect.id} --json`)) as any
+    expect(bindings.id).toBe(rect.id)
+    expect(bindings.fills).toBeUndefined()
+    expect(bindings.strokes).toBeUndefined()
+  })
 })

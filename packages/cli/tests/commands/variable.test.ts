@@ -57,4 +57,34 @@ describe('variable', () => {
     const result = (await run(`collection delete "${collectionId}" --json`)) as any
     expect(result.deleted).toBe(true)
   })
+
+  test('find searches variables by name', async () => {
+    // Create a test collection and variable first
+    const coll = (await run('collection create "FindTestCollection" --json')) as any
+    const testCollId = coll.id
+
+    await run(
+      `variable create "FindMe/Primary" --collection "${testCollId}" --type COLOR --value "#0000FF" --json`
+    )
+    await run(
+      `variable create "FindMe/Secondary" --collection "${testCollId}" --type COLOR --value "#00FF00" --json`
+    )
+
+    const results = (await run('variable find "FindMe" --json')) as any[]
+    expect(results.length).toBeGreaterThanOrEqual(2)
+    expect(results.every((v: any) => v.name.includes('FindMe'))).toBe(true)
+
+    // Cleanup
+    await run(`collection delete "${testCollId}" --json`)
+  })
+
+  test('find respects type filter', async () => {
+    const results = (await run('variable find "Color" --type COLOR --json')) as any[]
+    expect(Array.isArray(results)).toBe(true)
+  })
+
+  test('find respects limit', async () => {
+    const results = (await run('variable find "a" --limit 3 --json')) as any[]
+    expect(results.length).toBeLessThanOrEqual(3)
+  })
 })

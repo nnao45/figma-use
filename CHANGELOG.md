@@ -7,11 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- **TypeScript module not found** — moved `typescript` from devDependencies to dependencies, fixing `ERR_MODULE_NOT_FOUND` error when running via `npx figma-use` or `bunx figma-use` ([#2](https://github.com/dannote/figma-use/issues/2))
-
 ### Added
+
+- **`node ancestors`** — get parent chain from node to page root
+  ```bash
+  figma-use node ancestors <id>           # Up to 10 ancestors
+  figma-use node ancestors <id> --depth 5 # Limit depth
+  ```
+
+- **`node bindings`** — get variable bindings for fills and strokes
+  ```bash
+  figma-use node bindings <id>            # Show bound variables
+  ```
+
+- **`page bounds`** — get bounding box of all objects on current page
+  ```bash
+  figma-use page bounds                   # Returns minX, maxX, suggestedX, etc.
+  ```
+  Useful for finding free space to place new components.
+
+- **`variable find`** — search variables by name pattern
+  ```bash
+  figma-use variable find "Text/Neutral"  # Substring match
+  figma-use variable find "Color" --type COLOR --limit 10
+  ```
+
+- **`<instance>` in render** — create component instances in JSX render
+  ```tsx
+  <frame>
+    <instance component="59763:10626" />
+  </frame>
+  ```
 
 - **`analyze` commands** — design analysis tools for discovery and audit
 
@@ -135,6 +161,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Stories include args for both variant selection and text editing
 
 ### Fixed
+
+- **TypeScript module not found** — moved `typescript` from devDependencies to dependencies, fixing `ERR_MODULE_NOT_FOUND` error when running via `npx figma-use` or `bunx figma-use` ([#2](https://github.com/dannote/figma-use/issues/2))
 
 - **JSX export improvements**
   - Include white color (`#FFFFFF`) in icon exports

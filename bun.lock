@@ -12,6 +12,7 @@
         "fontoxpath": "^3.34.0",
         "postcss": "^8.5.6",
         "svgpath": "^2.6.0",
+        "typescript": "^5.8.3",
         "whaticon": "0.1.2",
       },
       "devDependencies": {
@@ -26,7 +27,6 @@
         "pixelmatch": "^7.1.0",
         "pngjs": "^7.0.0",
         "react": "19",
-        "typescript": "^5.8.3",
       },
     },
   },

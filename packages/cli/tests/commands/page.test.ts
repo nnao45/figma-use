@@ -35,4 +35,21 @@ describe('page', () => {
     const result = (await run(`page set "${namePart}" --json`)) as { id: string; name: string }
     expect(result.name).toContain(namePart)
   })
+
+  test('bounds returns page bounding box', async () => {
+    const bounds = (await run('page bounds --json')) as {
+      minX: number
+      minY: number
+      maxX: number
+      maxY: number
+      width: number
+      height: number
+      suggestedX: number
+    }
+    expect(typeof bounds.minX).toBe('number')
+    expect(typeof bounds.maxX).toBe('number')
+    expect(typeof bounds.width).toBe('number')
+    expect(typeof bounds.suggestedX).toBe('number')
+    expect(bounds.suggestedX).toBeGreaterThan(bounds.maxX)
+  })
 })

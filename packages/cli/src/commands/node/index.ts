@@ -1,5 +1,7 @@
 import { defineCommand } from 'citty'
 
+import ancestors from './ancestors.ts'
+import bindings from './bindings.ts'
 import bounds from './bounds.ts'
 import children from './children.ts'
 import clone from './clone.ts'
@@ -18,6 +20,8 @@ export default defineCommand({
     get,
     tree,
     children,
+    ancestors,
+    bindings,
     delete: deleteCmd,
     clone,
     rename,

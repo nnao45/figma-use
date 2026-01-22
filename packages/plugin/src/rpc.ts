@@ -310,8 +310,109 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       return node ? serializeNode(node) : null
     }
 
+    case 'get-ancestors': {
+      const { id, depth = 10 } = args as { id: string; depth?: number }
+      let node = await figma.getNodeByIdAsync(id)
+      if (!node) throw new Error('Node not found')
+
+      const ancestors: Array<{
+        id: string
+        name: string
+        type: string
+        childCount?: number
+      }> = []
+
+      let remaining = depth
+      while (node && remaining-- > 0) {
+        ancestors.push({
+          id: node.id,
+          name: node.name,
+          type: node.type,
+          childCount: 'children' in node ? (node as ChildrenMixin).children.length : undefined
+        })
+        node = node.parent
+      }
+      return ancestors
+    }
+
+    case 'get-node-bindings': {
+      const { id } = args as { id: string }
+      const node = (await figma.getNodeByIdAsync(id)) as SceneNode | null
+      if (!node) throw new Error('Node not found')
+
+      const result: Record<string, unknown> = { id: node.id, name: node.name }
+
+      if ('fills' in node && Array.isArray(node.fills)) {
+        const fillBindings: Array<{ index: number; variableId: string; variableName: string }> = []
+        for (let i = 0; i < node.fills.length; i++) {
+          const fill = node.fills[i]
+          if (fill.boundVariables?.color) {
+            const varId = fill.boundVariables.color.id
+            const variable = await figma.variables.getVariableByIdAsync(varId)
+            fillBindings.push({
+              index: i,
+              variableId: varId,
+              variableName: variable?.name || 'unknown'
+            })
+          }
+        }
+        if (fillBindings.length > 0) result.fills = fillBindings
+      }
+
+      if ('strokes' in node && Array.isArray(node.strokes)) {
+        const strokeBindings: Array<{ index: number; variableId: string; variableName: string }> =
+          []
+        for (let i = 0; i < node.strokes.length; i++) {
+          const stroke = node.strokes[i]
+          if (stroke.boundVariables?.color) {
+            const varId = stroke.boundVariables.color.id
+            const variable = await figma.variables.getVariableByIdAsync(varId)
+            strokeBindings.push({
+              index: i,
+              variableId: varId,
+              variableName: variable?.name || 'unknown'
+            })
+          }
+        }
+        if (strokeBindings.length > 0) result.strokes = strokeBindings
+      }
+
+      return result
+    }
+
     case 'get-current-page':
       return { id: figma.currentPage.id, name: figma.currentPage.name }
+
+    case 'get-page-bounds': {
+      const children = figma.currentPage.children
+      if (children.length === 0) {
+        return { minX: 0, minY: 0, maxX: 0, maxY: 0, width: 0, height: 0, suggestedX: 100 }
+      }
+
+      let minX = Infinity
+      let minY = Infinity
+      let maxX = -Infinity
+      let maxY = -Infinity
+
+      for (const node of children) {
+        if ('x' in node && 'y' in node && 'width' in node && 'height' in node) {
+          minX = Math.min(minX, node.x)
+          minY = Math.min(minY, node.y)
+          maxX = Math.max(maxX, node.x + node.width)
+          maxY = Math.max(maxY, node.y + node.height)
+        }
+      }
+
+      return {
+        minX: Math.round(minX),
+        minY: Math.round(minY),
+        maxX: Math.round(maxX),
+        maxY: Math.round(maxY),
+        width: Math.round(maxX - minX),
+        height: Math.round(maxY - minY),
+        suggestedX: Math.ceil(maxX / 100) * 100 + 100
+      }
+    }
 
     case 'list-fonts': {
       const fonts = await figma.listAvailableFontsAsync()
@@ -2150,6 +2251,8 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
 
       // Nodes that need SVG import after tree creation
       const svgNodes: Array<{ path: number[]; svgString: string }> = []
+      // Nodes that need instance creation after tree creation
+      const instanceNodes: Array<{ path: number[]; componentId: string; name?: string }> = []
 
       function buildTree(node: unknown, path: number[] = []): unknown {
         if (typeof node === 'string' || typeof node === 'number') return node
@@ -2166,6 +2269,19 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
           svgNodes.push({ path: [...path], svgString: props.__svgString as string })
           // Create placeholder frame
           return h(AutoLayout, { width: props.width || 24, height: props.height || 24 })
+        }
+
+        // Handle <instance> - mark for post-processing with createInstance
+        if (type === 'instance') {
+          const componentId = props.component as string
+          if (!componentId) throw new Error('<Instance> requires component prop')
+          instanceNodes.push({
+            path: [...path],
+            componentId,
+            name: props.name as string | undefined
+          })
+          // Create placeholder frame
+          return h(AutoLayout, { width: props.width || 100, height: props.height || 100 })
         }
 
         const Component = TYPE_MAP[type]
@@ -2232,6 +2348,40 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
           svgNode.y = target.y
           parent.insertChild(childIndex, svgNode)
           target.remove()
+        }
+      }
+
+      // Replace instance placeholders with actual component instances
+      for (const { path, componentId, name } of instanceNodes) {
+        let target: SceneNode = node
+        let parent: FrameNode | null = null
+        let childIndex = 0
+        for (let i = 0; i < path.length; i++) {
+          if ('children' in target) {
+            parent = target as FrameNode
+            childIndex = path[i]
+            target = parent.children[childIndex]
+          }
+        }
+        const component = (await figma.getNodeByIdAsync(componentId)) as ComponentNode | null
+        if (!component || component.type !== 'COMPONENT') {
+          throw new Error(`Component not found: ${componentId}`)
+        }
+        const instance = component.createInstance()
+        if (name) instance.name = name
+        if (parent) {
+          instance.x = target.x
+          instance.y = target.y
+          parent.insertChild(childIndex, instance)
+          target.remove()
+        } else {
+          // Root instance
+          instance.x = node.x
+          instance.y = node.y
+          figma.currentPage.appendChild(instance)
+          node.remove()
+          // Update node reference for parent attachment
+          ;(node as unknown as { id: string }).id = instance.id
         }
       }
 
@@ -2437,6 +2587,18 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
         return variables.map((v) => ({ id: v.id, name: v.name }))
       }
       return variables.map((v) => serializeVariable(v))
+    }
+
+    case 'find-variables': {
+      const { query, type, limit = 20 } = args as { query: string; type?: string; limit?: number }
+      const variables = await figma.variables.getLocalVariablesAsync(
+        type as VariableResolvedDataType | undefined
+      )
+      const lowerQuery = query.toLowerCase()
+      const matches = variables
+        .filter((v) => v.name.toLowerCase().includes(lowerQuery))
+        .slice(0, limit)
+      return matches.map((v) => serializeVariable(v))
     }
 
     case 'get-variable': {

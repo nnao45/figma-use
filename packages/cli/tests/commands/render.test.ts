@@ -161,3 +161,48 @@ describe('render with variables', () => {
     expect(colors.primary.name).toBe('Colors/Blue')
   })
 })
+
+describe('render with instances', () => {
+  test('renders component instance via <Instance>', async () => {
+    const { run, trackNode, setupTestPage, teardownTestPage } = await import('../helpers.ts')
+    const fs = await import('fs')
+    const path = await import('path')
+
+    await setupTestPage('render-instance')
+
+    // Create a component first
+    const comp = (await run(
+      'create component --x 2000 --y 0 --width 100 --height 50 --name "TestInstanceComp" --json'
+    )) as { id: string }
+    trackNode(comp.id)
+
+    // Create temp fixture file with instance
+    const fixtureDir = path.join(import.meta.dir, '../fixtures')
+    const fixturePath = path.join(fixtureDir, 'InstanceTest.figma.tsx')
+    const jsx = `export default ({ componentId }: { componentId: string }) => (
+  <frame w={200} h={100} flex="row" gap={10} name="InstanceTest">
+    <instance component={componentId} />
+  </frame>
+)`
+    fs.writeFileSync(fixturePath, jsx)
+
+    try {
+      const result = (await run(
+        `render tests/fixtures/InstanceTest.figma.tsx --props '{"componentId":"${comp.id}"}' --json`
+      )) as { id: string; name: string }
+
+      expect(result.id).toBeDefined()
+      expect(result.name).toBe('InstanceTest')
+      trackNode(result.id)
+
+      // Verify instance was created inside
+      const tree = (await run(`node tree ${result.id} --depth 2 --json`)) as {
+        children?: Array<{ type: string }>
+      }
+      expect(tree.children?.some((c) => c.type === 'INSTANCE')).toBe(true)
+    } finally {
+      fs.unlinkSync(fixturePath)
+      await teardownTestPage()
+    }
+  }, 30000)
+})

@@ -98,6 +98,9 @@ figma-use node tree                        # Page structure as tree
 figma-use node tree --depth 3              # Limit depth
 figma-use node tree <id>                   # Tree from specific node
 figma-use node children <id>               # List direct children
+figma-use node ancestors <id>              # Get parent chain to root
+figma-use node ancestors <id> --depth 5    # Limit ancestor depth
+figma-use node bindings <id>               # Get variable bindings for fills/strokes
 figma-use node bounds <id>                 # Position, size, center point
 figma-use node delete <id> [id2] [id3...]
 figma-use node clone <id> [id2...]          # Clone in same parent
@@ -201,6 +204,7 @@ figma-use page current
 figma-use page list
 figma-use page set "Page Name"
 figma-use page set <page-id>
+figma-use page bounds                      # Bounding box of all page objects
 figma-use viewport get
 figma-use viewport set --x 100 --y 200 --zoom 1.5
 figma-use viewport zoom-to-fit <id>
@@ -212,6 +216,8 @@ figma-use viewport zoom-to-fit "1:2 1:3 1:4"
 ```bash
 figma-use variable list
 figma-use variable list --collection <id>
+figma-use variable find "Text/Neutral"     # Search by name
+figma-use variable find "Color" --type COLOR --limit 10
 figma-use variable get <id>
 figma-use variable create "Primary" --collection <id> --type COLOR --value "#3B82F6"
 figma-use variable create "Spacing/MD" --collection <id> --type FLOAT --value 16
