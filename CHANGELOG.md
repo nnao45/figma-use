@@ -9,9 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`lint` command** — design linter with 17 rules for consistency, accessibility, and best practices
+- **`lint` command** (experimental) — design linter with 17 rules for consistency, accessibility, and best practices
   ```bash
   figma-use lint                          # Recommended preset
+  figma-use lint --page "Components"      # Lint specific page by name
   figma-use lint --preset strict          # Stricter rules  
   figma-use lint --preset accessibility   # A11y rules only
   figma-use lint --rule color-contrast    # Specific rule
