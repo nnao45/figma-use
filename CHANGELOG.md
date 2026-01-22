@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Semantic HTML in export** — automatically convert to semantic HTML elements
+  ```bash
+  figma-use export jsx 1:23              # Input → <input>, Button → <button>
+  figma-use export storybook             # Same for storybook
+  figma-use export jsx --no-semantic-html # Disable conversion
+  ```
+  Detection based on component names: `Input/*`, `Button/*`, `Checkbox/*`, etc.
+
 - **`node replace-with`** — replace node with another node or JSX from stdin
   ```bash
   figma-use node replace-with <id> --target <component-id>  # Creates instance
@@ -862,4 +870,3 @@ the same batch. See `component-set.tsx` for detailed explanation.
 [0.1.3]: https://github.com/dannote/figma-use/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/dannote/figma-use/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/dannote/figma-use/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/dannote/figma-use/releases/tag/v0.1.0

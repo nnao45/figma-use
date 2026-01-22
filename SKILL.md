@@ -147,8 +147,18 @@ Export all components on current page as Storybook stories:
 figma-use export storybook                      # Output to ./stories/
 figma-use export storybook --out ./src/stories  # Custom output dir
 figma-use export storybook --match-icons        # Match vectors to Iconify icons
-figma-use export storybook --match-icons --prefer-icons lucide,tabler
+figma-use export storybook --no-semantic-html   # Disable semantic HTML conversion
 ```
+
+**Semantic HTML:** By default, components are converted to semantic HTML elements based on their names:
+- `Input/*`, `TextField/*` → `<input type="text">`
+- `Textarea/*` → `<textarea>`
+- `Checkbox/*` → `<input type="checkbox">`
+- `Radio/*` → `<input type="radio">`
+- `Button/*` → `<button>`
+- `Select/*`, `Dropdown/*` → `<select>`
+
+Use `--no-semantic-html` to disable this and keep `<Frame>` elements.
 
 Generates `.stories.tsx` files:
 - **ComponentSets** → React component with props + stories with args

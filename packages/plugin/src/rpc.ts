@@ -3307,7 +3307,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
 
     case 'analyze-colors': {
       // Key: "hex|variableName" or "hex|" for hardcoded
-      const colors = new Map<string, { hex: string; count: number; nodes: string[]; variableName: string | null; isStyle: boolean }>()
+      const colors = new Map<string, { hex: string; count: number; nodes: string[]; variableName: string | null; isVariable: boolean; isStyle: boolean }>()
       const variableCache = new Map<string, string>()
 
       async function getVariableName(varId: string): Promise<string | null> {
@@ -3324,7 +3324,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
 
       async function addColor(hex: string, varName: string | null, nodeId: string, isStyle: boolean) {
         const key = `${hex}|${varName || ''}`
-        const entry = colors.get(key) || { hex, count: 0, nodes: [], variableName: varName, isStyle: false }
+        const entry = colors.get(key) || { hex, count: 0, nodes: [], variableName: varName, isVariable: !!varName, isStyle: false }
         entry.count++
         if (entry.nodes.length < 5) entry.nodes.push(nodeId)
         if (isStyle) entry.isStyle = true

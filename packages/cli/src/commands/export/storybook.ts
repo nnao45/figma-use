@@ -593,12 +593,14 @@ interface ProcessOptions {
   iconThreshold: number
   preferIcons?: string[]
   verbose: boolean
+  semanticHtml: boolean
 }
 
 async function processComponent(
   comp: ComponentInfo,
   options: ProcessOptions,
-  textPropMap?: Map<string, string>
+  textPropMap?: Map<string, string>,
+  componentSetName?: string
 ): Promise<{ jsx: ts.JsxChild; usedComponents: Set<string> } | null> {
   const node = await sendCommand<FigmaNode>('get-node-tree', { id: comp.id })
   if (!node) return null
@@ -617,7 +619,11 @@ async function processComponent(
     })
   }
 
-  const jsx = nodeToJsx(node, { textPropMap })
+  const jsx = nodeToJsx(node, {
+    textPropMap,
+    semanticHtml: options.semanticHtml,
+    componentSetName
+  })
   if (!jsx) return null
 
   const usedComponents = new Set<string>()
@@ -934,7 +940,7 @@ async function exportComponentSet(
   }
 
   for (const comp of comps) {
-    const result = await processComponent(comp, options, textPropMap)
+    const result = await processComponent(comp, options, textPropMap, baseName)
     if (!result) continue
 
     for (const c of result.usedComponents) usedComponents.add(c)
@@ -997,6 +1003,7 @@ export default defineCommand({
     verbose: { type: 'boolean', alias: 'v', description: 'Show matched icons' },
     framework: { type: 'string', description: 'Framework: react (default), vue' },
     'no-fonts': { type: 'boolean', description: 'Skip fonts.css generation' },
+    'no-semantic-html': { type: 'boolean', description: 'Disable semantic HTML conversion' },
     semi: { type: 'boolean', description: 'Add semicolons' },
     'single-quote': { type: 'boolean', description: 'Use single quotes (default: true)' },
     'tab-width': { type: 'string', description: 'Spaces per indent (default: 2)' },
@@ -1053,7 +1060,8 @@ export default defineCommand({
         matchIcons: !!matchIcons,
         iconThreshold,
         preferIcons,
-        verbose: !!args.verbose
+        verbose: !!args.verbose,
+        semanticHtml: !args['no-semantic-html']
       }
 
       const groups = groupComponents(components)

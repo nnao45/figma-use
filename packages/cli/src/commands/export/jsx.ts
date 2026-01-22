@@ -21,6 +21,7 @@ export default defineCommand({
     'icon-threshold': { type: 'string', description: 'Icon match threshold 0-1 (default: 0.9)' },
     'prefer-icons': { type: 'string', description: 'Preferred icon sets (comma-separated, e.g., lucide,tabler)' },
     verbose: { type: 'boolean', alias: 'v', description: 'Show matched icons' },
+    'no-semantic-html': { type: 'boolean', description: 'Disable semantic HTML conversion' },
     pretty: { type: 'boolean', description: 'Format output' },
     semi: { type: 'boolean', description: 'Add semicolons (default: false)' },
     'single-quote': { type: 'boolean', description: 'Use single quotes (default: true)' },
@@ -71,7 +72,8 @@ export default defineCommand({
       }
 
       const componentName = args.name || toComponentName(node.name)
-      let code = generateCode(node, componentName)
+      const semanticHtml = !args['no-semantic-html']
+      let code = generateCode(node, componentName, { semanticHtml })
 
       const shouldFormat = args.pretty ?? config.format.pretty
       if (shouldFormat) {

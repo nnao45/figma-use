@@ -101,7 +101,7 @@ describe('export jsx', () => {
     // Render JSX back (via shell pipe)
     const rendered = JSON.parse(
       execSync(
-        `cd ${process.cwd()} && echo '${jsx.replace(/'/g, "'\\''")}' | bun ../../dist/cli/index.js render --stdin --x 800 --y 0 --json`,
+        `cd /Users/dannote/Development/figma-use/packages/cli && echo '${jsx.replace(/'/g, "'\\''")}' | bun ../../dist/cli/index.js render --stdin --x 800 --y 0 --json`,
         { encoding: 'utf-8' }
       )
     )
@@ -121,7 +121,7 @@ describe('export jsx', () => {
     // Render an icon first
     const icon = JSON.parse(
       execSync(
-        `cd ${process.cwd()} && echo '<Icon name="lucide:star" size={24} color="#F59E0B" />' | bun ../../dist/cli/index.js render --stdin --x 1000 --y 0 --json`,
+        `cd /Users/dannote/Development/figma-use/packages/cli && echo '<Icon name="lucide:star" size={24} color="#F59E0B" />' | bun ../../dist/cli/index.js render --stdin --x 1000 --y 0 --json`,
         { encoding: 'utf-8' }
       )
     )

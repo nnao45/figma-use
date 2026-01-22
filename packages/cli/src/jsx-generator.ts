@@ -190,6 +190,67 @@ function svgToJsx(svgString: string): ts.JsxElement | ts.JsxSelfClosingElement |
 
 export interface JsxContext {
   textPropMap?: Map<string, string> // textPropertyRef → propName
+  semanticHtml?: boolean // Convert to semantic HTML elements
+  componentSetName?: string // Parent ComponentSet name for semantic detection
+}
+
+type SemanticElement = {
+  tag: string
+  type?: string // input type attribute
+  selfClosing?: boolean
+}
+
+function getSemanticElement(name: string): SemanticElement | null {
+  const lower = name.toLowerCase()
+
+  // Input patterns
+  if (
+    lower.startsWith('input/') ||
+    lower.startsWith('textfield/') ||
+    lower.startsWith('textinput') ||
+    lower === 'input' ||
+    lower === 'textfield' ||
+    lower === 'text-field' ||
+    lower === 'text-input'
+  ) {
+    return { tag: 'input', type: 'text', selfClosing: true }
+  }
+
+  // Textarea patterns
+  if (
+    lower.startsWith('textarea/') ||
+    lower === 'textarea' ||
+    lower === 'text-area'
+  ) {
+    return { tag: 'textarea' }
+  }
+
+  // Select/Dropdown patterns
+  if (
+    lower.startsWith('select/') ||
+    lower.startsWith('dropdown/') ||
+    lower === 'select' ||
+    lower === 'dropdown'
+  ) {
+    return { tag: 'select' }
+  }
+
+  // Checkbox patterns
+  if (lower.startsWith('checkbox/') || lower === 'checkbox') {
+    return { tag: 'input', type: 'checkbox', selfClosing: true }
+  }
+
+  // Radio patterns
+  if (lower.startsWith('radio/') || lower === 'radio') {
+    return { tag: 'input', type: 'radio', selfClosing: true }
+  }
+
+  // Button patterns
+  if (lower.startsWith('button/') || lower === 'button') {
+    return { tag: 'button' }
+  }
+
+  return null
 }
 
 export function nodeToJsx(node: FigmaNode, ctx: JsxContext = {}): ts.JsxChild | null {
@@ -264,13 +325,27 @@ export function nodeToJsx(node: FigmaNode, ctx: JsxContext = {}): ts.JsxChild | 
     )
   }
 
-  const tagName = TYPE_MAP[node.type]
-  if (!tagName) return null
+  const baseTagName = TYPE_MAP[node.type]
+  if (!baseTagName) return null
+
+  // Check for semantic HTML element (use componentSetName if available)
+  const nameForSemantic = ctx.componentSetName || node.name
+  const semantic = ctx.semanticHtml && nameForSemantic ? getSemanticElement(nameForSemantic) : null
+  const tagName = semantic?.tag || baseTagName
+  const isSemanticElement = !!semantic
 
   const attrs: ts.JsxAttribute[] = []
 
+  // Add type attribute for inputs
+  if (semantic?.type) {
+    attrs.push(createJsxAttribute('type', strLit(semantic.type)))
+  }
+
   if (node.name && !node.name.match(/^(Frame|Rectangle)\s*\d*$/)) {
-    attrs.push(createJsxAttribute('name', strLit(node.name)))
+    // Don't add name for semantic elements (it's redundant)
+    if (!isSemanticElement) {
+      attrs.push(createJsxAttribute('name', strLit(node.name)))
+    }
   }
   if (node.width) attrs.push(createJsxAttribute('w', numLit(node.width)))
   if (node.height) attrs.push(createJsxAttribute('h', numLit(node.height)))
@@ -341,12 +416,37 @@ export function nodeToJsx(node: FigmaNode, ctx: JsxContext = {}): ts.JsxChild | 
     }
   }
 
+  // Semantic elements that are self-closing (input) or should ignore children
+  if (semantic?.selfClosing) {
+    return ts.factory.createJsxSelfClosingElement(
+      ts.factory.createIdentifier(tagName),
+      undefined,
+      ts.factory.createJsxAttributes(attrs)
+    )
+  }
+
   if (children.length === 0) {
     return ts.factory.createJsxSelfClosingElement(
       ts.factory.createIdentifier(tagName),
       undefined,
       ts.factory.createJsxAttributes(attrs)
     )
+  }
+
+  // For semantic elements like button, extract text content
+  if (isSemanticElement && tagName === 'button') {
+    const textChild = findTextChild(node)
+    if (textChild) {
+      return ts.factory.createJsxElement(
+        ts.factory.createJsxOpeningElement(
+          ts.factory.createIdentifier(tagName),
+          undefined,
+          ts.factory.createJsxAttributes(attrs)
+        ),
+        [ts.factory.createJsxText(textChild, false)],
+        ts.factory.createJsxClosingElement(ts.factory.createIdentifier(tagName))
+      )
+    }
   }
 
   return ts.factory.createJsxElement(
@@ -358,6 +458,19 @@ export function nodeToJsx(node: FigmaNode, ctx: JsxContext = {}): ts.JsxChild | 
     children,
     ts.factory.createJsxClosingElement(ts.factory.createIdentifier(tagName))
   )
+}
+
+function findTextChild(node: FigmaNode): string | null {
+  if (node.type === 'TEXT' && node.characters) {
+    return node.characters
+  }
+  if (node.children) {
+    for (const child of node.children) {
+      const text = findTextChild(child)
+      if (text) return text
+    }
+  }
+  return null
 }
 
 export function collectUsedComponents(node: FigmaNode, used: Set<string> = new Set()): Set<string> {
@@ -384,8 +497,12 @@ export function collectUsedComponents(node: FigmaNode, used: Set<string> = new S
   return used
 }
 
-export function generateCode(node: FigmaNode, componentName: string): string {
-  const jsx = nodeToJsx(node)
+export function generateCode(
+  node: FigmaNode,
+  componentName: string,
+  ctx: JsxContext = {}
+): string {
+  const jsx = nodeToJsx(node, ctx)
   if (!jsx) return ''
 
   const usedComponents = collectUsedComponents(node)
