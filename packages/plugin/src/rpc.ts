@@ -1981,13 +1981,19 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       if (!root) return { error: 'Root node not found' }
 
       const nodes = queryNodes(selector, root, { limit: limit ?? 1000 })
-      const fields = select || ['id', 'name', 'type']
+      const fields = select || ['id', 'name', 'type', 'x', 'y', 'width', 'height']
 
       return nodes.map((node) => {
         const result: Record<string, unknown> = {}
         for (const field of fields) {
           if (field in node) {
-            result[field] = (node as unknown as Record<string, unknown>)[field]
+            const value = (node as unknown as Record<string, unknown>)[field]
+            // Round geometry values for cleaner output
+            if ((field === 'x' || field === 'y' || field === 'width' || field === 'height') && typeof value === 'number') {
+              result[field] = Math.round(value)
+            } else {
+              result[field] = value
+            }
           }
         }
         return result
