@@ -2,6 +2,7 @@ import { defineCommand } from 'citty'
 
 import { sendCommand, handleError } from '../../client.ts'
 import { ok } from '../../format.ts'
+import type { NodeRef } from '../../types.ts'
 
 export default defineCommand({
   meta: { description: 'Convert frame(s) to component(s)' },
@@ -13,7 +14,7 @@ export default defineCommand({
     try {
       const ids = args.ids.split(/[\s,]+/).filter(Boolean)
 
-      const result = await sendCommand<Array<{ id: string; name: string }>>('eval', {
+      const result = await sendCommand<NodeRef[]>('eval', {
         code: `
           const ids = ${JSON.stringify(ids)}
           const result = []

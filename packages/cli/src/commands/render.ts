@@ -4,6 +4,7 @@ import { resolve } from 'path'
 import * as React from 'react'
 
 import { handleError, sendCommand } from '../client.ts'
+import type { NodeRef } from '../types.ts'
 import { ok, fail } from '../format.ts'
 import {
   loadVariablesIntoRegistry,
@@ -128,7 +129,7 @@ export default defineCommand({
 
       if (!isRegistryLoaded()) {
         try {
-          const vars = await sendCommand<Array<{ id: string; name: string }>>('get-variables', {
+          const vars = await sendCommand<NodeRef[]>('get-variables', {
             simple: true
           })
           loadVariablesIntoRegistry(vars)

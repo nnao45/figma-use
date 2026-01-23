@@ -9,6 +9,7 @@ import {
   collectIcons
 } from './index.ts'
 import { renderWithWidgetApi } from './widget-renderer.ts'
+import type { NodeRef } from '../types.ts'
 
 const MOCK_RENDER_MODULE = `
   export const Frame = 'frame'
@@ -103,9 +104,7 @@ export async function renderFromString(
 
   if (!isRegistryLoaded()) {
     try {
-      const vars = await sendCommand<Array<{ id: string; name: string }>>('get-variables', {
-        simple: true
-      })
+      const vars = await sendCommand<NodeRef[]>('get-variables', { simple: true })
       loadVariablesIntoRegistry(vars)
     } catch {}
   }

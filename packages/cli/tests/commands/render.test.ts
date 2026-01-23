@@ -6,6 +6,7 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
 
 import { run, trackNode, setupTestPage, teardownTestPage } from '../helpers.ts'
+import type { NodeRef } from '../../src/types.ts'
 
 describe('render', () => {
   let testFrameId: string
@@ -26,7 +27,7 @@ describe('render', () => {
   test('renders component and returns root node', async () => {
     const result = (await run(
       `render tests/fixtures/Card.figma.tsx --props '{"title":"Test","items":["A"]}' --parent "${testFrameId}" --json`
-    )) as { id: string; name: string }
+    )) as NodeRef
 
     expect(result.id).toBeDefined()
     expect(result.name).toBe('Card')
@@ -36,7 +37,7 @@ describe('render', () => {
   test('renders nested children correctly', async () => {
     const result = (await run(
       `render tests/fixtures/Card.figma.tsx --props '{"title":"Products","items":["iPhone","MacBook","AirPods"]}' --parent "${testFrameId}" --x 350 --json`
-    )) as { id: string; name: string }
+    )) as NodeRef
 
     expect(result.name).toBe('Card')
     trackNode(result.id)
@@ -52,7 +53,7 @@ describe('render', () => {
   test('applies layout and styling props', async () => {
     const result = (await run(
       `render tests/fixtures/Card.figma.tsx --props '{"title":"Styled","items":["A"]}' --parent "${testFrameId}" --x 700 --json`
-    )) as { id: string; name: string }
+    )) as NodeRef
 
     expect(result.name).toBe('Card')
     trackNode(result.id)
@@ -74,7 +75,7 @@ describe('render', () => {
   test('creates text nodes with content', async () => {
     const result = (await run(
       `render tests/fixtures/Card.figma.tsx --props '{"title":"Hello World","items":["A"]}' --parent "${testFrameId}" --x 1050 --json`
-    )) as { id: string; name: string }
+    )) as NodeRef
 
     trackNode(result.id)
 
@@ -101,7 +102,7 @@ describe('render', () => {
 
     const result = (await run(
       `render tests/fixtures/Card.figma.tsx --props '{"title":"Nested","items":["X"]}' --parent "${container.id}" --json`
-    )) as { id: string; name: string }
+    )) as NodeRef
 
     expect(result.name).toBe('Card')
 
@@ -149,7 +150,7 @@ describe('render from file', () => {
 
     const result = (await run(
       `render tests/fixtures/Card.figma.tsx --props '{"title":"FileTest","items":["A"]}' --json`
-    )) as { id: string; name: string }
+    )) as NodeRef
     expect(result.id).toBeDefined()
     expect(result.name).toBe('Card')
     trackNode(result.id)
@@ -221,7 +222,7 @@ describe('render with instances', () => {
     try {
       const result = (await run(
         `render tests/fixtures/InstanceTest.figma.tsx --props '{"componentId":"${comp.id}"}' --json`
-      )) as { id: string; name: string }
+      )) as NodeRef
 
       expect(result.id).toBeDefined()
       expect(result.name).toBe('InstanceTest')

@@ -5,6 +5,7 @@
 import { sendCommand } from '../client.ts'
 import { loadIconSvg } from './icon.ts'
 import { isTreeNode, type TreeNode, type ReactElement, type Props } from './tree.ts'
+import type { NodeRef } from '../types.ts'
 
 interface IconNode {
   __icon: true
@@ -142,7 +143,7 @@ async function processIcons(tree: TreeNode): Promise<TreeNode> {
 export async function renderWithWidgetApi(
   element: unknown,
   options?: { x?: number; y?: number; parent?: string }
-): Promise<{ id: string; name: string }> {
+): Promise<NodeRef> {
   let tree = typeof element === 'function' ? element() : resolveElement(element)
 
   if (!tree) {

@@ -4,6 +4,7 @@ import * as React from './mini-react.ts'
 import { sendCommand } from '../client.ts'
 import { loadVariablesIntoRegistry, isRegistryLoaded, preloadIcons, collectIcons } from './index.ts'
 import { renderWithWidgetApi } from './widget-renderer.ts'
+import type { NodeRef } from '../types.ts'
 
 function buildComponent(jsx: string): React.FC {
   const code = `
@@ -22,14 +23,12 @@ function buildComponent(jsx: string): React.FC {
 export async function renderJsx(
   jsx: string,
   options?: { x?: number; y?: number; parent?: string }
-): Promise<Array<{ id: string; name: string }>> {
+): Promise<NodeRef[]> {
   const Component = buildComponent(jsx)
 
   if (!isRegistryLoaded()) {
     try {
-      const vars = await sendCommand<Array<{ id: string; name: string }>>('get-variables', {
-        simple: true
-      })
+      const vars = await sendCommand<NodeRef[]>('get-variables', { simple: true })
       loadVariablesIntoRegistry(vars)
     } catch {}
   }

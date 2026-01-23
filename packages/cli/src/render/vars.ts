@@ -59,7 +59,9 @@ const variableRegistry = new Map<string, ResolvedVariable>()
 /**
  * Load variables from Figma into registry
  */
-export function loadVariablesIntoRegistry(variables: Array<{ id: string; name: string }>) {
+import type { NodeRef } from '../types.ts'
+
+export function loadVariablesIntoRegistry(variables: NodeRef[]) {
   variableRegistry.clear()
   for (const v of variables) {
     const match = v.id.match(/VariableID:(\d+):(\d+)/)

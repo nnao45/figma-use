@@ -1,7 +1,13 @@
 import { defineRule } from '../core/rule.ts'
+import type { NodeRef } from '../core/types.ts'
 
 interface Options {
   allowInComponents?: boolean
+}
+
+interface NodeWithParent extends NodeRef {
+  type?: string
+  parent?: NodeWithParent
 }
 
 export default defineRule({
@@ -26,10 +32,10 @@ export default defineRule({
     // Optionally allow unstyled text inside components (for dynamic content)
     if (options?.allowInComponents) {
       // Check if any parent is a component
-      let parent: { id: string; name: string; type?: string; parent?: { id: string; name: string } } | undefined = node.parent as typeof parent
+      let parent: NodeWithParent | undefined = node.parent as NodeWithParent
       while (parent) {
         if (parent.type === 'COMPONENT') return
-        parent = parent.parent as typeof parent
+        parent = parent.parent
       }
     }
 

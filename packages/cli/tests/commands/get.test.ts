@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
 
 import { run, trackNode, setupTestPage, teardownTestPage } from '../helpers.ts'
+import type { NodeRef } from '../../src/types.ts'
 
 describe('get', () => {
   let componentId: string
@@ -20,7 +21,7 @@ describe('get', () => {
   })
 
   test('pages returns array', async () => {
-    const pages = (await run('get pages --json')) as { id: string; name: string }[]
+    const pages = (await run('get pages --json')) as NodeRef[]
     expect(Array.isArray(pages)).toBe(true)
     expect(pages.length).toBeGreaterThan(0)
   })

@@ -85,6 +85,17 @@ export interface FigmaPage {
   name: string
 }
 
+export interface NodeRef {
+  id: string
+  name: string
+}
+
+export interface CreatedNode {
+  id: string
+  name: string
+  type: string
+}
+
 export interface ChromeDevToolsTarget {
   id: string
   title: string

@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
 
 import { run, trackNode, setupTestPage, teardownTestPage } from '../helpers.ts'
+import type { NodeRef } from '../../src/types.ts'
 
 describe('create', () => {
   let testFrameId: string
@@ -194,7 +195,7 @@ describe('create', () => {
 
   describe('page', () => {
     test('creates new page', async () => {
-      const page = (await run('create page "Temp Page" --json')) as { id: string; name: string }
+      const page = (await run('create page "Temp Page" --json')) as NodeRef
       expect(page.name).toBe('Temp Page')
       await run(`node delete ${page.id} --json`)
     })

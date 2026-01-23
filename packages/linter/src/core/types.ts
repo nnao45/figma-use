@@ -54,11 +54,16 @@ export interface Rule {
   check(node: FigmaNode, context: RuleContext): void
 }
 
+export interface NodeRef {
+  id: string
+  name: string
+}
+
 export interface FigmaNode {
   id: string
   name: string
   type: string
-  parent?: { id: string; name: string }
+  parent?: NodeRef
   children?: FigmaNode[]
   
   // Geometry
@@ -91,7 +96,7 @@ export interface FigmaNode {
   
   // Components
   componentId?: string
-  mainComponent?: { id: string; name: string }
+  mainComponent?: NodeRef
   
   // Effects
   effects?: Effect[]

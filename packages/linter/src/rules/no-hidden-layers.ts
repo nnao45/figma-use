@@ -1,7 +1,13 @@
 import { defineRule } from '../core/rule.ts'
+import type { NodeRef } from '../core/types.ts'
 
 interface Options {
   allowInComponents?: boolean
+}
+
+interface NodeWithParent extends NodeRef {
+  type?: string
+  parent?: NodeWithParent
 }
 
 export default defineRule({
@@ -19,10 +25,10 @@ export default defineRule({
 
     // Allow hidden layers in components (often used for variants/states)
     if (options?.allowInComponents !== false) {
-      let parent: { id: string; name: string; type?: string; parent?: { id: string; name: string } } | undefined = node.parent as typeof parent
+      let parent: NodeWithParent | undefined = node.parent as NodeWithParent
       while (parent) {
         if (parent.type === 'COMPONENT' || parent.type === 'COMPONENT_SET') return
-        parent = parent.parent as typeof parent
+        parent = parent.parent
       }
     }
 

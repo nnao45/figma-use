@@ -1,7 +1,12 @@
 import { defineRule } from '../core/rule.ts'
+import type { NodeRef } from '../core/types.ts'
 
 interface Options {
   maxDepth?: number
+}
+
+interface NodeWithParent extends NodeRef {
+  parent?: NodeWithParent
 }
 
 export default defineRule({
@@ -17,7 +22,7 @@ export default defineRule({
     const maxDepth = options?.maxDepth ?? 6
 
     let depth = 0
-    let current: { id: string; name: string; parent?: { id: string; name: string } } | undefined = node.parent as typeof current
+    let current: NodeWithParent | undefined = node.parent as NodeWithParent
     while (current) {
       depth++
       current = current.parent
