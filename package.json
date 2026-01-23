@@ -7,7 +7,7 @@
     "url": "git+https://github.com/dannote/figma-use.git"
   },
   "dependencies": {
-    "agentfmt": "^0.1.1",
+    "agentfmt": "^0.1.2",
     "citty": "^0.1.6",
     "consola": "^3.4.2",
     "diff": "^8.0.3",
@@ -16,7 +16,8 @@
     "postcss": "^8.5.6",
     "svgpath": "^2.6.0",
     "typescript": "^5.8.3",
-    "whaticon": "0.1.2"
+    "whaticon": "0.1.2",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@iconify/core": "^4.1.0",
