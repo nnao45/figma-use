@@ -447,6 +447,17 @@ JSON output for CI/CD:
 figma-use lint --json > report.json
 ```
 
+### Comment-Driven Workflow (Experimental)
+
+AI agents can wait for Figma comments and respond:
+
+```bash
+figma-use comment watch --json   # Blocks until new comment
+figma-use comment resolve <id>   # Mark as done
+```
+
+Returns comment text, author, and `target_node` — the exact element under the comment pin. Agent processes the request, resolves the comment, then runs `watch` again for the next one.
+
 ## Full Command Reference
 
 See [REFERENCE.md](./REFERENCE.md) for the complete list of 100+ commands.
