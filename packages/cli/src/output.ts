@@ -302,6 +302,11 @@ export function formatResult(result: unknown, context?: string): string {
       return `Selected: ${sel.join(', ')}`
     }
 
+    if (obj.selected !== undefined) {
+      const count = obj.selected as number
+      return ok(`Selected ${count} node${count !== 1 ? 's' : ''}`)
+    }
+
     return JSON.stringify(obj, null, 2)
   }
 
