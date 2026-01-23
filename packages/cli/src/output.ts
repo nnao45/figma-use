@@ -220,6 +220,33 @@ function formatDeleted(result: DeletedResult): string {
   return result.deleted ? ok('Deleted') : fail('Delete failed')
 }
 
+function formatVariable(variable: Record<string, unknown>): string {
+  const lines: string[] = []
+  const type = (variable.type as string).toLowerCase()
+  const name = variable.name as string
+  const id = variable.id as string
+
+  lines.push(entity(type, name, id))
+
+  const valuesByMode = variable.valuesByMode as Record<string, unknown>
+  if (valuesByMode) {
+    const modes = Object.entries(valuesByMode)
+    if (modes.length === 1) {
+      lines.push(`  value: ${modes[0][1]}`)
+    } else {
+      for (const [modeId, value] of modes) {
+        lines.push(`  ${modeId}: ${value}`)
+      }
+    }
+  }
+
+  if (variable.collectionId) {
+    lines.push(`  collection: ${variable.collectionId}`)
+  }
+
+  return lines.join('\n')
+}
+
 function formatPages(pages: FigmaPage[]): string {
   const items = pages.map((p) => ({
     header: `"${p.name}" (${p.id})`
@@ -276,6 +303,11 @@ export function formatResult(result: unknown, context?: string): string {
 
     if ('pluginConnected' in obj) {
       return formatStatus({ pluginConnected: Boolean(obj.pluginConnected) })
+    }
+
+    // Variable
+    if (obj.id && obj.type && obj.valuesByMode) {
+      return formatVariable(obj)
     }
 
     if (obj.id && obj.type) {
