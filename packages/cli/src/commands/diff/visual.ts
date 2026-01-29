@@ -25,14 +25,18 @@ export default defineCommand({
       const scale = args.scale ? Number(args.scale) : 1
       const threshold = args.threshold ? Number(args.threshold) : 0.1
 
-      const [fromResult, toResult] = await Promise.all([
-        sendCommand('export-node', {
-          id: args.from,
-          format: 'PNG',
-          scale
-        }) as Promise<ExportResult>,
-        sendCommand('export-node', { id: args.to, format: 'PNG', scale }) as Promise<ExportResult>
-      ])
+      // Execute sequentially to avoid parallel WebSocket issues
+      const fromResult = (await sendCommand('export-node', {
+        id: args.from,
+        format: 'PNG',
+        scale
+      })) as ExportResult
+
+      const toResult = (await sendCommand('export-node', {
+        id: args.to,
+        format: 'PNG',
+        scale
+      })) as ExportResult
 
       if (!fromResult?.data || !toResult?.data) {
         console.error(fail('Could not export nodes'))
@@ -65,6 +69,7 @@ export default defineCommand({
 
       console.log(`${diffPixels} pixels differ (${diffPercent}%)`)
       console.log(`Saved to ${args.output}`)
+      process.exit(0)
     } catch (e) {
       handleError(e)
     }

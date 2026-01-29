@@ -610,6 +610,11 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
           }
         }
 
+        // Vector paths (SVG data)
+        if ('vectorPaths' in n && Array.isArray(n.vectorPaths) && n.vectorPaths.length > 0) {
+          base.vectorPaths = (n as VectorNode).vectorPaths
+        }
+
         if ('children' in n && (n as FrameNode).children) {
           base.children = (n as FrameNode).children.map(serializeTreeNode)
         }

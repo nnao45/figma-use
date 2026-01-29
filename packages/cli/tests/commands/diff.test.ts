@@ -306,4 +306,139 @@ describe('diff', () => {
       expect(output).toContain('No differences')
     })
   })
+
+  describe('diff create - extended properties', () => {
+    test('detects individual corner radii changes', async () => {
+      // Create original frame, clone it, then modify the clone
+      const original = (await run(
+        `create frame --x 1100 --y 10 --width 100 --height 100 --fill "#FFFFFF" --name "RadiiTest" --parent "${testFrameId}" --json`
+      )) as { id: string }
+      trackNode(original.id)
+
+      const modified = (await run(`node clone ${original.id} --json`)) as { id: string }
+      trackNode(modified.id)
+      await run(`node move ${modified.id} --x 1220 --y 10`)
+
+      // Set individual corner radii on modified (different values for each corner)
+      await run(`set radius ${modified.id} --top-left 8 --top-right 16 --bottom-right 4 --bottom-left 0`)
+
+      const output = (await run(
+        `diff create --from ${original.id} --to ${modified.id}`,
+        false
+      )) as string
+      expect(output).toContain('+radii: 8 16 4 0')
+    })
+
+    test('detects rotation changes', async () => {
+      const original = (await run(
+        `create rect --x 1340 --y 10 --width 50 --height 50 --fill "#FF0000" --name "RotationTest" --parent "${testFrameId}" --json`
+      )) as { id: string }
+      trackNode(original.id)
+
+      const modified = (await run(`node clone ${original.id} --json`)) as { id: string }
+      trackNode(modified.id)
+      await run(`node move ${modified.id} --x 1400 --y 10`)
+
+      await run(`set rotation ${modified.id} --angle 45`)
+
+      const output = (await run(
+        `diff create --from ${original.id} --to ${modified.id}`,
+        false
+      )) as string
+      expect(output).toContain('+rotation: 45')
+    })
+
+    test('detects blend mode changes', async () => {
+      const original = (await run(
+        `create rect --x 1460 --y 10 --width 50 --height 50 --fill "#00FF00" --name "BlendTest" --parent "${testFrameId}" --json`
+      )) as { id: string }
+      trackNode(original.id)
+
+      const modified = (await run(`node clone ${original.id} --json`)) as { id: string }
+      trackNode(modified.id)
+      await run(`node move ${modified.id} --x 1520 --y 10`)
+
+      await run(`set blend ${modified.id} MULTIPLY`)
+
+      const output = (await run(
+        `diff create --from ${original.id} --to ${modified.id}`,
+        false
+      )) as string
+      expect(output).toContain('+blendMode: MULTIPLY')
+    })
+
+    test('detects effect changes (shadow)', async () => {
+      const original = (await run(
+        `create rect --x 1580 --y 10 --width 50 --height 50 --fill "#0000FF" --name "ShadowTest" --parent "${testFrameId}" --json`
+      )) as { id: string }
+      trackNode(original.id)
+
+      const modified = (await run(`node clone ${original.id} --json`)) as { id: string }
+      trackNode(modified.id)
+      await run(`node move ${modified.id} --x 1640 --y 10`)
+
+      await run(`set effect ${modified.id} --type DROP_SHADOW --offset-x 4 --offset-y 4 --radius 8 --color "#00000040"`)
+
+      const output = (await run(
+        `diff create --from ${original.id} --to ${modified.id}`,
+        false
+      )) as string
+      expect(output).toContain('+effect: DROP_SHADOW')
+    })
+  })
+
+  describe('diff visual', () => {
+    test('creates visual diff between two nodes', async () => {
+      // Create two identical frames
+      const frame1 = (await run(
+        `create frame --x 1700 --y 10 --width 100 --height 100 --fill "#FF0000" --name "VisualDiff1" --parent "${testFrameId}" --json`
+      )) as { id: string }
+      trackNode(frame1.id)
+
+      const frame2 = (await run(
+        `create frame --x 1820 --y 10 --width 100 --height 100 --fill "#FF0000" --name "VisualDiff2" --parent "${testFrameId}" --json`
+      )) as { id: string }
+      trackNode(frame2.id)
+
+      const outputPath = `/tmp/figma-visual-diff-${Date.now()}.png`
+      const output = (await run(
+        `diff visual --from ${frame1.id} --to ${frame2.id} --output ${outputPath}`,
+        false
+      )) as string
+
+      expect(output).toContain('0 pixels differ')
+      expect(output).toContain('Saved to')
+
+      // Cleanup
+      const fs = await import('fs')
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath)
+    })
+
+    test('detects visual differences', async () => {
+      // Create two rectangles with different colors (without parent to ensure proper export)
+      const rect1 = (await run(
+        `create rect --x 2000 --y 500 --width 100 --height 100 --fill "#FF0000" --name "VisualDiffRed" --json`
+      )) as { id: string }
+      trackNode(rect1.id)
+
+      const rect2 = (await run(
+        `create rect --x 2200 --y 500 --width 100 --height 100 --fill "#0000FF" --name "VisualDiffBlue" --json`
+      )) as { id: string }
+      trackNode(rect2.id)
+
+      const outputPath = `/tmp/figma-visual-diff-color-${Date.now()}.png`
+      const output = (await run(
+        `diff visual --from ${rect1.id} --to ${rect2.id} --output ${outputPath}`,
+        false
+      )) as string
+
+      // Should detect differences (red vs blue)
+      expect(output).toMatch(/\d+ pixels differ/)
+      expect(output).not.toMatch(/^0 pixels differ/)
+
+      // Cleanup
+      const fs = await import('fs')
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath)
+    })
+  })
 })

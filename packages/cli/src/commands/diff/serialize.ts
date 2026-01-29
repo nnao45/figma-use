@@ -9,6 +9,15 @@
  *   opacity: 0.8
  */
 
+interface Effect {
+  type: string
+  radius?: number
+  color?: string
+  opacity?: number
+  offset?: { x: number; y: number }
+  spread?: number
+}
+
 export interface NodeProps {
   type: string
   name?: string
@@ -18,7 +27,14 @@ export interface NodeProps {
   stroke?: string
   strokeWeight?: number
   opacity?: number
-  radius?: number | [number, number, number, number]
+  radius?: number
+  radii?: [number, number, number, number]
+  cornerSmoothing?: number
+  blendMode?: string
+  rotation?: number
+  clipsContent?: boolean
+  effects?: Effect[]
+  vectorPaths?: string[]
   fontSize?: number
   fontFamily?: string
   fontWeight?: number
@@ -62,8 +78,76 @@ export function serializeNode(node: Record<string, unknown>): string {
     lines.push(`opacity: ${roundTo(node.opacity as number, 2)}`)
   }
 
-  if (node.cornerRadius !== undefined && node.cornerRadius !== 0) {
+  // Corner radius - check for individual radii first
+  const hasIndividualRadii =
+    node.topLeftRadius !== undefined ||
+    node.topRightRadius !== undefined ||
+    node.bottomLeftRadius !== undefined ||
+    node.bottomRightRadius !== undefined
+
+  if (hasIndividualRadii) {
+    const tl = (node.topLeftRadius as number) ?? 0
+    const tr = (node.topRightRadius as number) ?? 0
+    const bl = (node.bottomLeftRadius as number) ?? 0
+    const br = (node.bottomRightRadius as number) ?? 0
+    if (tl !== 0 || tr !== 0 || bl !== 0 || br !== 0) {
+      // Check if all radii are the same
+      if (tl === tr && tr === bl && bl === br) {
+        lines.push(`radius: ${tl}`)
+      } else {
+        lines.push(`radii: ${tl} ${tr} ${br} ${bl}`)
+      }
+    }
+  } else if (node.cornerRadius !== undefined && node.cornerRadius !== 0) {
     lines.push(`radius: ${node.cornerRadius}`)
+  }
+
+  // Corner smoothing (iOS-style squircle)
+  if (node.cornerSmoothing !== undefined && node.cornerSmoothing !== 0) {
+    lines.push(`cornerSmoothing: ${roundTo(node.cornerSmoothing as number, 2)}`)
+  }
+
+  // Blend mode
+  if (
+    node.blendMode !== undefined &&
+    node.blendMode !== 'PASS_THROUGH' &&
+    node.blendMode !== 'NORMAL'
+  ) {
+    lines.push(`blendMode: ${node.blendMode}`)
+  }
+
+  // Rotation
+  if (node.rotation !== undefined && node.rotation !== 0) {
+    lines.push(`rotation: ${roundTo(node.rotation as number, 2)}`)
+  }
+
+  // Clips content
+  if (node.clipsContent === true) {
+    lines.push(`clipsContent: true`)
+  }
+
+  // Effects (shadows, blurs)
+  const effects = node.effects as Effect[] | undefined
+  if (effects && effects.length > 0) {
+    for (const effect of effects) {
+      const parts = [effect.type]
+      if (effect.radius !== undefined) parts.push(`r=${effect.radius}`)
+      if (effect.color) parts.push(`c=${effect.color}`)
+      if (effect.opacity !== undefined && effect.opacity !== 1) parts.push(`o=${effect.opacity}`)
+      if (effect.offset) parts.push(`x=${effect.offset.x} y=${effect.offset.y}`)
+      if (effect.spread !== undefined) parts.push(`s=${effect.spread}`)
+      lines.push(`effect: ${parts.join(' ')}`)
+    }
+  }
+
+  // Vector paths (SVG)
+  const vectorPaths = node.vectorPaths as Array<{ data: string }> | undefined
+  if (vectorPaths && vectorPaths.length > 0) {
+    for (const path of vectorPaths) {
+      if (path.data) {
+        lines.push(`path: ${path.data}`)
+      }
+    }
   }
 
   // Text-specific
@@ -95,6 +179,8 @@ export function serializeNode(node: Record<string, unknown>): string {
 
 export function deserializeNode(text: string): NodeProps {
   const props: NodeProps = { type: 'UNKNOWN' }
+  const effects: Effect[] = []
+  const paths: string[] = []
 
   for (const line of text.split('\n')) {
     const colonIdx = line.indexOf(':')
@@ -135,6 +221,43 @@ export function deserializeNode(text: string): NodeProps {
       case 'radius':
         props.radius = Number(value)
         break
+      case 'radii': {
+        const parts = value.split(' ').map(Number)
+        props.radii = [parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0, parts[3] ?? 0]
+        break
+      }
+      case 'cornerSmoothing':
+        props.cornerSmoothing = Number(value)
+        break
+      case 'blendMode':
+        props.blendMode = value
+        break
+      case 'rotation':
+        props.rotation = Number(value)
+        break
+      case 'clipsContent':
+        props.clipsContent = value === 'true'
+        break
+      case 'effect': {
+        const effect: Effect = { type: '' }
+        const parts = value.split(' ')
+        effect.type = parts[0] ?? ''
+        for (const part of parts.slice(1)) {
+          if (part.startsWith('r=')) effect.radius = Number(part.slice(2))
+          else if (part.startsWith('c=')) effect.color = part.slice(2)
+          else if (part.startsWith('o=')) effect.opacity = Number(part.slice(2))
+          else if (part.startsWith('x='))
+            effect.offset = { x: Number(part.slice(2)), y: effect.offset?.y ?? 0 }
+          else if (part.startsWith('y='))
+            effect.offset = { x: effect.offset?.x ?? 0, y: Number(part.slice(2)) }
+          else if (part.startsWith('s=')) effect.spread = Number(part.slice(2))
+        }
+        effects.push(effect)
+        break
+      }
+      case 'path':
+        paths.push(value)
+        break
       case 'fontSize':
         props.fontSize = Number(value)
         break
@@ -156,6 +279,9 @@ export function deserializeNode(text: string): NodeProps {
     }
   }
 
+  if (effects.length > 0) props.effects = effects
+  if (paths.length > 0) props.vectorPaths = paths
+
   return props
 }
 
@@ -171,7 +297,11 @@ export function diffProps(oldProps: NodeProps, newProps: NodeProps): Partial<Nod
     const newVal = newProps[key]
 
     if (Array.isArray(oldVal) && Array.isArray(newVal)) {
-      if (oldVal.join(',') !== newVal.join(',')) {
+      if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+        ;(changes as Record<string, unknown>)[key] = newVal
+      }
+    } else if (typeof oldVal === 'object' && typeof newVal === 'object') {
+      if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
         ;(changes as Record<string, unknown>)[key] = newVal
       }
     } else if (oldVal !== newVal) {
