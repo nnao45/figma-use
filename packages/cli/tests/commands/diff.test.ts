@@ -320,7 +320,9 @@ describe('diff', () => {
       await run(`node move ${modified.id} --x 1220 --y 10`)
 
       // Set individual corner radii on modified (different values for each corner)
-      await run(`set radius ${modified.id} --top-left 8 --top-right 16 --bottom-right 4 --bottom-left 0`)
+      await run(
+        `set radius ${modified.id} --top-left 8 --top-right 16 --bottom-right 4 --bottom-left 0`
+      )
 
       const output = (await run(
         `diff create --from ${original.id} --to ${modified.id}`,
@@ -377,7 +379,9 @@ describe('diff', () => {
       trackNode(modified.id)
       await run(`node move ${modified.id} --x 1640 --y 10`)
 
-      await run(`set effect ${modified.id} --type DROP_SHADOW --offset-x 4 --offset-y 4 --radius 8 --color "#00000040"`)
+      await run(
+        `set effect ${modified.id} --type DROP_SHADOW --offset-x 4 --offset-y 4 --radius 8 --color "#00000040"`
+      )
 
       const output = (await run(
         `diff create --from ${original.id} --to ${modified.id}`,
