@@ -9,20 +9,20 @@ CLI for Figma. Two modes: commands and JSX.
 
 ```bash
 # Commands
-figma-use create frame --width 400 --height 300 --fill "#FFF" --layout VERTICAL --gap 16
-figma-use create icon mdi:home --size 32 --color "#3B82F6"
-figma-use set fill 1:23 "$Colors/Primary"
+bun run dist/cli/index.js create frame --width 400 --height 300 --fill "#FFF" --layout VERTICAL --gap 16
+bun run dist/cli/index.js create icon mdi:home --size 32 --color "#3B82F6"
+bun run dist/cli/index.js set fill 1:23 "$Colors/Primary"
 
 # JSX (props directly on elements, NOT style={{}})
 echo '<Frame p={24} bg="#3B82F6" rounded={12}>
   <Text size={18} color="#FFF">Hello</Text>
-</Frame>' | figma-use render --stdin --x 100 --y 100
+</Frame>' | bun run dist/cli/index.js render --stdin --x 100 --y 100
 ```
 
 ## Before You Start
 
 ```bash
-figma-use status  # Check connection
+bun run dist/cli/index.js status  # Check connection
 ```
 
 If not connected — start Figma with remote debugging:
@@ -45,9 +45,9 @@ Start Figma with `--remote-debugging-port=9222` and you're ready.
 **Imperative** — single operations:
 
 ```bash
-figma-use create frame --width 400 --height 300 --fill "#FFF" --radius 12
-figma-use set fill <id> "#FF0000"
-figma-use node move <id> --x 100 --y 200
+bun run dist/cli/index.js create frame --width 400 --height 300 --fill "#FFF" --radius 12
+bun run dist/cli/index.js set fill <id> "#FF0000"
+bun run dist/cli/index.js node move <id> --x 100 --y 200
 ```
 
 **Declarative** — render JSX trees:
@@ -56,7 +56,7 @@ figma-use node move <id> --x 100 --y 200
 echo '<Frame p={24} gap={16} flex="col" bg="#FFF" rounded={12}>
   <Text size={24} weight="bold" color="#000">Title</Text>
   <Text size={14} color="#666">Description</Text>
-</Frame>' | figma-use render --stdin --x 100 --y 200
+</Frame>' | bun run dist/cli/index.js render --stdin --x 100 --y 200
 ```
 
 stdin supports both pure JSX and full module syntax with imports:
@@ -97,9 +97,9 @@ Use `<Instance>` to create component instances:
 150k+ icons from Iconify by name:
 
 ```bash
-figma-use create icon mdi:home
-figma-use create icon lucide:star --size 48 --color "#F59E0B"
-figma-use create icon heroicons:bell-solid --component  # as Figma component
+bun run dist/cli/index.js create icon mdi:home
+bun run dist/cli/index.js create icon lucide:star --size 48 --color "#F59E0B"
+bun run dist/cli/index.js create icon heroicons:bell-solid --component  # as Figma component
 ```
 
 In JSX:
@@ -121,30 +121,30 @@ Load images from URL:
 Convert Figma nodes back to JSX code:
 
 ```bash
-figma-use export jsx <id>           # Minified
-figma-use export jsx <id> --pretty  # Formatted
+bun run dist/cli/index.js export jsx <id>           # Minified
+bun run dist/cli/index.js export jsx <id> --pretty  # Formatted
 
 # Format options
-figma-use export jsx <id> --pretty --semi --tabs
+bun run dist/cli/index.js export jsx <id> --pretty --semi --tabs
 
 # Match vector shapes to Iconify icons (requires: npm i whaticon)
-figma-use export jsx <id> --match-icons
-figma-use export jsx <id> --match-icons --icon-threshold 0.85 --prefer-icons lucide,tabler
+bun run dist/cli/index.js export jsx <id> --match-icons
+bun run dist/cli/index.js export jsx <id> --match-icons --icon-threshold 0.85 --prefer-icons lucide,tabler
 ```
 
 Round-trip workflow:
 
 ```bash
 # Export → edit → re-render
-figma-use export jsx <id> --pretty > component.tsx
+bun run dist/cli/index.js export jsx <id> --pretty > component.tsx
 # ... edit the file ...
-figma-use render component.tsx --x 500 --y 0
+bun run dist/cli/index.js render component.tsx --x 500 --y 0
 ```
 
 Compare two nodes as JSX:
 
 ```bash
-figma-use diff jsx <from-id> <to-id>
+bun run dist/cli/index.js diff jsx <from-id> <to-id>
 ```
 
 ## Export Storybook (Experimental)
@@ -152,10 +152,10 @@ figma-use diff jsx <from-id> <to-id>
 Export all components on current page as Storybook stories:
 
 ```bash
-figma-use export storybook                      # Output to ./stories/
-figma-use export storybook --out ./src/stories  # Custom output dir
-figma-use export storybook --match-icons        # Match vectors to Iconify icons
-figma-use export storybook --no-semantic-html   # Disable semantic HTML conversion
+fbun run dist/cli/index.js export storybook                      # Output to ./stories/
+fbun run dist/cli/index.js export storybook --out ./src/stories  # Custom output dir
+fbun run dist/cli/index.js export storybook --match-icons        # Match vectors to Iconify icons
+fbun run dist/cli/index.js export storybook --no-semantic-html   # Disable semantic HTML conversion
 ```
 
 **Semantic HTML:** By default, components are converted to semantic HTML elements based on their names:
@@ -205,8 +205,8 @@ export const Primary: StoryObj<typeof Button> = {
 Reference Figma variables in any color option with `var:Name` or `$Name`:
 
 ```bash
-figma-use create rect --width 100 --height 100 --fill 'var:Colors/Primary'
-figma-use set fill <id> '$Brand/Accent'
+bun run dist/cli/index.js create rect --width 100 --height 100 --fill 'var:Colors/Primary'
+bun run dist/cli/index.js set fill <id> '$Brand/Accent'
 ```
 
 In JSX:
@@ -307,8 +307,8 @@ export default () => (
 ```
 
 ```bash
-figma-use render ./Card.figma.tsx --x 100 --y 200
-figma-use render --examples  # Full API reference
+bun run dist/cli/index.js render ./Card.figma.tsx --x 100 --y 200
+bun run dist/cli/index.js render --examples  # Full API reference
 ```
 
 ## Variants (ComponentSet)
@@ -343,7 +343,7 @@ Creates real ComponentSet with all combinations.
 Compare frames and generate patch:
 
 ```bash
-figma-use diff create --from <id1> --to <id2>
+bun run dist/cli/index.js diff create --from <id1> --to <id2>
 ```
 
 ```diff
@@ -360,15 +360,15 @@ figma-use diff create --from <id1> --to <id2>
 Apply with validation:
 
 ```bash
-figma-use diff apply patch.diff            # Fails if old values don't match
-figma-use diff apply patch.diff --dry-run  # Preview
-figma-use diff apply patch.diff --force    # Skip validation
+bun run dist/cli/index.js diff apply patch.diff            # Fails if old values don't match
+bun run dist/cli/index.js diff apply patch.diff --dry-run  # Preview
+bun run dist/cli/index.js diff apply patch.diff --force    # Skip validation
 ```
 
 Visual diff (red = changed pixels):
 
 ```bash
-figma-use diff visual --from <id1> --to <id2> --output diff.png
+bun run dist/cli/index.js diff visual --from <id1> --to <id2> --output diff.png
 ```
 
 ⚠️ **After initial render, use diffs or direct commands.** Don't re-render full JSX trees.
@@ -378,14 +378,14 @@ figma-use diff visual --from <id1> --to <id2> --output diff.png
 Find nodes using XPath selectors:
 
 ```bash
-figma-use query "//FRAME"                              # All frames
-figma-use query "//FRAME[@width < 300]"                # Frames narrower than 300px
-figma-use query "//COMPONENT[starts-with(@name, 'Button')]"  # Name starts with
-figma-use query "//FRAME[contains(@name, 'Card')]"     # Name contains
-figma-use query "//SECTION/FRAME"                      # Direct children
-figma-use query "//SECTION//TEXT"                      # All descendants
-figma-use query "//*[@cornerRadius > 0]"               # Any node with radius
-figma-use query "//FRAME[@width > 100 and @width < 500]"  # Range
+bun run dist/cli/index.js query "//FRAME"                              # All frames
+bun run dist/cli/index.js query "//FRAME[@width < 300]"                # Frames narrower than 300px
+bun run dist/cli/index.js query "//COMPONENT[starts-with(@name, 'Button')]"  # Name starts with
+bun run dist/cli/index.js query "//FRAME[contains(@name, 'Card')]"     # Name contains
+bun run dist/cli/index.js query "//SECTION/FRAME"                      # Direct children
+bun run dist/cli/index.js query "//SECTION//TEXT"                      # All descendants
+bun run dist/cli/index.js query "//*[@cornerRadius > 0]"               # Any node with radius
+bun run dist/cli/index.js query "//FRAME[@width > 100 and @width < 500]"  # Range
 ```
 
 Attributes: `name`, `width`, `height`, `x`, `y`, `cornerRadius`, `opacity`, `visible`, `characters`, `fontSize`, `layoutMode`, `itemSpacing`
@@ -396,42 +396,42 @@ XPath functions: `contains()`, `starts-with()`, `string-length()`, `not()`, `and
 
 ```bash
 # Create
-figma-use create frame --width 400 --height 300 --fill "#FFF" --layout VERTICAL --gap 16
-figma-use create text --text "Hello" --font-size 24 --fill "#000"
-figma-use create rect --width 100 --height 50 --fill "#F00" --radius 8
+bun run dist/cli/index.js create frame --width 400 --height 300 --fill "#FFF" --layout VERTICAL --gap 16
+bun run dist/cli/index.js create text --text "Hello" --font-size 24 --fill "#000"
+bun run dist/cli/index.js create rect --width 100 --height 50 --fill "#F00" --radius 8
 
 # Find
-figma-use query "//FRAME[@name = 'Header']"
-figma-use find --name "Button"
-figma-use find --type FRAME
-figma-use selection get
+bun run dist/cli/index.js query "//FRAME[@name = 'Header']"
+bun run dist/cli/index.js find --name "Button"
+bun run dist/cli/index.js find --type FRAME
+bun run dist/cli/index.js selection get
 
 # Explore
-figma-use node ancestors <id>              # Get parent chain (useful for navigation)
-figma-use node bindings <id>               # Get variable bindings for fills/strokes
-figma-use page bounds                      # Find free space for new objects
-figma-use variable find "Text/Neutral"     # Search variables by name
+bun run dist/cli/index.js node ancestors <id>              # Get parent chain (useful for navigation)
+bun run dist/cli/index.js node bindings <id>               # Get variable bindings for fills/strokes
+bun run dist/cli/index.js page bounds                      # Find free space for new objects
+bun run dist/cli/index.js variable find "Text/Neutral"     # Search variables by name
 
 # Modify
-figma-use set fill <id> "#FF0000"
-figma-use set radius <id> 12
-figma-use set text <id> "New text"
-figma-use set text-resize <id> height   # Wrap text (height auto, fixed width)
-figma-use set layout <id> --mode VERTICAL --gap 12 --padding 16
-figma-use set layout <id> --mode GRID --cols "1fr 1fr 1fr" --rows "auto" --gap 16
-figma-use node move <id> --x 100 --y 200
-figma-use node resize <id> --width 300 --height 200
-figma-use node delete <id> [id2...]
-figma-use node to-component <id>
+bun run dist/cli/index.js set fill <id> "#FF0000"
+bun run dist/cli/index.js set radius <id> 12
+bun run dist/cli/index.js set text <id> "New text"
+bun run dist/cli/index.js set text-resize <id> height   # Wrap text (height auto, fixed width)
+bun run dist/cli/index.js set layout <id> --mode VERTICAL --gap 12 --padding 16
+bun run dist/cli/index.js set layout <id> --mode GRID --cols "1fr 1fr 1fr" --rows "auto" --gap 16
+bun run dist/cli/index.js node move <id> --x 100 --y 200
+bun run dist/cli/index.js node resize <id> --width 300 --height 200
+bun run dist/cli/index.js node delete <id> [id2...]
+bun run dist/cli/index.js node to-component <id>
 
 # Export
-figma-use export node <id> --output design.png
-figma-use export screenshot --output viewport.png
+bun run dist/cli/index.js export node <id> --output design.png
+bun run dist/cli/index.js export screenshot --output viewport.png
 
 # Navigate
-figma-use page list
-figma-use page set "Page Name"
-figma-use viewport zoom-to-fit <id>
+bun run dist/cli/index.js page list
+bun run dist/cli/index.js page set "Page Name"
+bun run dist/cli/index.js viewport zoom-to-fit <id>
 ```
 
 Full reference: [REFERENCE.md](https://github.com/dannote/figma-use/blob/master/REFERENCE.md)
@@ -442,24 +442,24 @@ Discovery tools for understanding design systems:
 
 ```bash
 # Repeated patterns — potential components
-figma-use analyze clusters
-figma-use analyze clusters --min-count 5
+bun run dist/cli/index.js analyze clusters
+bun run dist/cli/index.js analyze clusters --min-count 5
 
 # Color palette
-figma-use analyze colors                   # Usage frequency
-figma-use analyze colors --show-similar    # Find similar colors to merge
+bun run dist/cli/index.js analyze colors                   # Usage frequency
+bun run dist/cli/index.js analyze colors --show-similar    # Find similar colors to merge
 
 # Typography
-figma-use analyze typography               # All font combinations
-figma-use analyze typography --group-by size
+bun run dist/cli/index.js analyze typography               # All font combinations
+bun run dist/cli/index.js analyze typography --group-by size
 
 # Spacing
-figma-use analyze spacing --grid 8         # Check 8px grid compliance
+bun run dist/cli/index.js analyze spacing --grid 8         # Check 8px grid compliance
 
 # Accessibility snapshot — extract interactive elements
-figma-use analyze snapshot                 # Full page
-figma-use analyze snapshot <id> -i         # Interactive only (buttons, inputs, etc.)
-figma-use analyze snapshot --depth 6       # Limit depth
+bun run dist/cli/index.js analyze snapshot                 # Full page
+bun run dist/cli/index.js analyze snapshot <id> -i         # Interactive only (buttons, inputs, etc.)
+bun run dist/cli/index.js analyze snapshot --depth 6       # Limit depth
 ```
 
 **Use cases:**
@@ -476,14 +476,14 @@ Output shows counts, examples, and warnings (e.g., off-grid spacing, hardcoded c
 Check designs for consistency and accessibility issues:
 
 ```bash
-figma-use lint                          # Recommended preset
-figma-use lint --page "Components"      # Lint specific page
-figma-use lint --preset strict          # Stricter rules
-figma-use lint --preset accessibility   # A11y only (contrast, touch targets)
-figma-use lint --rule color-contrast    # Single rule
-figma-use lint -v                       # With fix suggestions
-figma-use lint --json                   # For CI/CD
-figma-use lint --list-rules             # Show all rules
+bun run dist/cli/index.js lint                          # Recommended preset
+bun run dist/cli/index.js lint --page "Components"      # Lint specific page
+bun run dist/cli/index.js lint --preset strict          # Stricter rules
+bun run dist/cli/index.js lint --preset accessibility   # A11y only (contrast, touch targets)
+bun run dist/cli/index.js lint --rule color-contrast    # Single rule
+bun run dist/cli/index.js lint -v                       # With fix suggestions
+bun run dist/cli/index.js lint --json                   # For CI/CD
+bun run dist/cli/index.js lint --list-rules             # Show all rules
 ```
 
 **Presets:** `recommended`, `strict`, `accessibility`, `design-system`
@@ -521,51 +521,51 @@ Variables: `var:Colors/Primary` or `$Colors/Primary`
 ### Always verify visually
 
 ```bash
-figma-use export node <id> --output /tmp/check.png
+bun run dist/cli/index.js export node <id> --output /tmp/check.png
 ```
 
 ### Always zoom after creating
 
 ```bash
-figma-use viewport zoom-to-fit <id>
+bun run dist/cli/index.js viewport zoom-to-fit <id>
 ```
 
 ### Position multiple renders separately
 
 ```bash
-echo '...' | figma-use render --stdin --x 0 --y 0
-echo '...' | figma-use render --stdin --x 500 --y 0    # Not at same position!
+echo '...' | bun run dist/cli/index.js render --stdin --x 0 --y 0
+echo '...' | bun run dist/cli/index.js render --stdin --x 500 --y 0    # Not at same position!
 ```
 
 ### Copy between pages
 
 ```bash
-figma-use node clone <id> [id2...] --json | jq -r '.[].id'
-figma-use node set-parent <new-id> --parent <target-page-id>
-figma-use node move <new-id> --x 50 --y 50
+bun run dist/cli/index.js node clone <id> [id2...] --json | jq -r '.[].id'
+bun run dist/cli/index.js node set-parent <new-id> --parent <target-page-id>
+bun run dist/cli/index.js node move <new-id> --x 50 --y 50
 ```
 
 ### Replace node
 
 ```bash
 # Replace with component (creates instance)
-figma-use node replace-with <id> --target <component-id>
+bun run dist/cli/index.js node replace-with <id> --target <component-id>
 
 # Replace with JSX from stdin
-echo '<Icon name="lucide:x" size={16} />' | figma-use node replace-with <id> --stdin
+echo '<Icon name="lucide:x" size={16} />' | bun run dist/cli/index.js node replace-with <id> --stdin
 ```
 
 ### Convert to component
 
 ```bash
-figma-use node to-component <id>
-figma-use node to-component "1:2 1:3 1:4"  # Multiple
+bun run dist/cli/index.js node to-component <id>
+bun run dist/cli/index.js node to-component "1:2 1:3 1:4"  # Multiple
 ```
 
 ### Instance internal IDs
 
 ```bash
-figma-use set text "I123:456;789:10" "New text"  # I<instance>;<internal>
+bun run dist/cli/index.js set text "I123:456;789:10" "New text"  # I<instance>;<internal>
 ```
 
 ### Row layout needs width
@@ -581,8 +581,8 @@ figma-use set text "I123:456;789:10" "New text"  # I<instance>;<internal>
 ### Sections
 
 ```bash
-figma-use create section --name "Buttons" --x 0 --y 0 --width 600 --height 200
-figma-use node set-parent <id> --parent <section-id>
+bun run dist/cli/index.js create section --name "Buttons" --x 0 --y 0 --width 600 --height 200
+bun run dist/cli/index.js node set-parent <id> --parent <section-id>
 ```
 
 ⚠️ Deleting section deletes all children!
@@ -592,7 +592,7 @@ figma-use node set-parent <id> --parent <section-id>
 Wait for designer feedback and react:
 
 ```bash
-figma-use comment watch --json
+bun run dist/cli/index.js comment watch --json
 ```
 
 Output when comment arrives:
@@ -624,25 +624,25 @@ Draw, screenshot, adjust, repeat — like a designer tweaking Bezier curves:
 
 ```bash
 # 1. Draw initial shape
-figma-use create vector --path "M 50 0 L 100 100 L 0 100 Z" --fill "#F00"
+bun run dist/cli/index.js create vector --path "M 50 0 L 100 100 L 0 100 Z" --fill "#F00"
 
 # 2. Check result
-figma-use export node <id> --output /tmp/shape.png
+bun run dist/cli/index.js export node <id> --output /tmp/shape.png
 
 # 3. Adjust: scale, move, flip
-figma-use path scale <id> --factor 0.8
-figma-use path move <id> --dx 20 --dy -10
-figma-use path flip <id> --axis x
+bun run dist/cli/index.js path scale <id> --factor 0.8
+bun run dist/cli/index.js path move <id> --dx 20 --dy -10
+bun run dist/cli/index.js path flip <id> --axis x
 
 # 4. Or replace path entirely
-figma-use path set <id> "M 50 0 C 80 30 80 70 50 100 C 20 70 20 30 50 0 Z"
+bun run dist/cli/index.js path set <id> "M 50 0 C 80 30 80 70 50 100 C 20 70 20 30 50 0 Z"
 
 # 5. Screenshot again, repeat until good
-figma-use export node <id> --output /tmp/shape.png
+bun run dist/cli/index.js export node <id> --output /tmp/shape.png
 ```
 
 For complex illustrations, import SVG:
 
 ```bash
-figma-use import --svg "$(cat icon.svg)"
+bun run dist/cli/index.js import --svg "$(cat icon.svg)"
 ```

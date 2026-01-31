@@ -77,6 +77,55 @@ figma-use status
 
 That's it. No plugins to install.
 
+### WSL2 + Windows Figma Desktop
+
+On WSL2, the Linux version of Figma (`figma-linux`) has known font issues — `listAvailableFontsAsync()` returns 0 fonts due to an unhandled `getModifiedFonts` message in recent versions. A reliable workaround is to connect from WSL2 to the Windows Figma desktop app instead.
+
+**1. Start Figma on Windows with remote debugging**
+
+```powershell
+"C:\Users\%USERNAME%\AppData\Local\Figma\Figma.exe" --remote-debugging-port=9222
+```
+
+**2. Set up port forwarding on Windows (Admin PowerShell)**
+
+Figma binds to `127.0.0.1:9222`, which isn't directly reachable from WSL2. Forward it:
+
+```powershell
+netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=9222 connectaddress=127.0.0.1 connectport=9222
+netsh advfirewall firewall add rule name="Figma CDP" dir=in action=allow protocol=TCP localport=9222
+```
+
+**3. Forward localhost:9222 inside WSL2 to the Windows host**
+
+figma-use connects to `localhost:9222`, so forward it to the Windows host IP:
+
+```bash
+# Find your Windows host IP
+ip route show default | awk '{print $3}'
+# e.g. 192.168.64.1
+
+# Forward with a one-liner Node.js TCP proxy
+node -e "
+const net = require('net');
+const server = net.createServer(c => {
+  const r = net.connect(9222, '$(ip route show default | awk \'{print $3}\')', () => { c.pipe(r); r.pipe(c); });
+  r.on('error', () => c.destroy());
+  c.on('error', () => r.destroy());
+});
+server.listen(9222, '127.0.0.1', () => console.log('forwarding to Windows Figma'));
+" &
+```
+
+**4. Verify**
+
+```bash
+figma-use status
+# ✓ Connected to Figma
+```
+
+All 8000+ Windows fonts are now available — no font helper issues.
+
 ## Two Modes
 
 Imperative — one command at a time:
