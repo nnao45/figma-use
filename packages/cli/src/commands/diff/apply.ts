@@ -84,14 +84,230 @@ export default defineCommand({
             continue
           }
 
-          // TODO: Create node based on type
-          // For now, we'll skip create operations as they need parent resolution
-          results.push({
-            nodeId: 'new',
-            path,
-            status: 'skipped',
-            error: 'CREATE not yet implemented - use render for new nodes'
-          })
+          try {
+            // Resolve parent by walking the full path from root
+            // Path format: "/GrandParent/Parent/Child" → walk each segment to find the parent
+            const pathParts = path.split('/').filter(Boolean)
+            let parentId: string | undefined
+            if (pathParts.length > 1) {
+              const parentParts = pathParts.slice(0, -1)
+              // Build an XPath-like query to resolve the exact ancestor chain
+              // e.g., ["Card", "Header"] → //*[@name='Card']/*[@name='Header']
+              let currentId: string | undefined
+              for (const segment of parentParts) {
+                const found = (await sendCommand('find-by-name', {
+                  name: segment,
+                  exact: true,
+                  limit: 50
+                })) as Array<{ id: string; parentId?: string }>
+
+                if (!found || found.length === 0) break
+
+                if (!currentId) {
+                  // First segment: pick the first top-level match
+                  currentId = found[0]!.id
+                } else {
+                  // Subsequent segments: find the one that is a child of currentId
+                  const children = (await sendCommand('get-children', {
+                    id: currentId,
+                    depth: 1
+                  })) as Array<{ id: string; name: string }>
+                  const match = children.find((c) => c.name === segment)
+                  if (match) {
+                    currentId = match.id
+                  } else {
+                    // Fallback: use the first global match if not found as child
+                    currentId = found[0]!.id
+                  }
+                }
+              }
+              parentId = currentId
+            }
+
+            const x = newProps.pos?.[0] ?? 0
+            const y = newProps.pos?.[1] ?? 0
+            const width = newProps.size?.[0] ?? 100
+            const height = newProps.size?.[1] ?? 100
+            const nodeName = pathParts[pathParts.length - 1]
+
+            let createdNode: Record<string, unknown> | undefined
+
+            switch (newProps.type) {
+              case 'FRAME':
+                createdNode = (await sendCommand('create-frame', {
+                  x,
+                  y,
+                  width,
+                  height,
+                  name: nodeName,
+                  parentId,
+                  fill: newProps.fill,
+                  stroke: newProps.stroke,
+                  strokeWeight: newProps.strokeWeight,
+                  radius: newProps.radius,
+                  opacity: newProps.opacity
+                })) as Record<string, unknown>
+                break
+              case 'RECTANGLE':
+                createdNode = (await sendCommand('create-rectangle', {
+                  x,
+                  y,
+                  width,
+                  height,
+                  name: nodeName,
+                  parentId,
+                  fill: newProps.fill,
+                  stroke: newProps.stroke,
+                  strokeWeight: newProps.strokeWeight,
+                  radius: newProps.radius,
+                  opacity: newProps.opacity
+                })) as Record<string, unknown>
+                break
+              case 'ELLIPSE':
+                createdNode = (await sendCommand('create-ellipse', {
+                  x,
+                  y,
+                  width,
+                  height,
+                  name: nodeName,
+                  parentId,
+                  fill: newProps.fill,
+                  stroke: newProps.stroke,
+                  strokeWeight: newProps.strokeWeight,
+                  opacity: newProps.opacity
+                })) as Record<string, unknown>
+                break
+              case 'TEXT':
+                createdNode = (await sendCommand('create-text', {
+                  x,
+                  y,
+                  text: newProps.text ?? nodeName ?? 'Text',
+                  fontSize: newProps.fontSize,
+                  fontFamily: newProps.fontFamily,
+                  fill: newProps.fill,
+                  opacity: newProps.opacity,
+                  name: nodeName,
+                  parentId
+                })) as Record<string, unknown>
+                break
+              case 'LINE':
+                createdNode = (await sendCommand('create-line', {
+                  x,
+                  y,
+                  length: width,
+                  rotation: newProps.rotation,
+                  name: nodeName,
+                  parentId,
+                  stroke: newProps.stroke,
+                  strokeWeight: newProps.strokeWeight
+                })) as Record<string, unknown>
+                break
+              case 'POLYGON':
+                createdNode = (await sendCommand('create-polygon', {
+                  x,
+                  y,
+                  size: Math.max(width, height),
+                  name: nodeName,
+                  parentId,
+                  fill: newProps.fill,
+                  stroke: newProps.stroke,
+                  strokeWeight: newProps.strokeWeight
+                })) as Record<string, unknown>
+                break
+              case 'STAR':
+                createdNode = (await sendCommand('create-star', {
+                  x,
+                  y,
+                  size: Math.max(width, height),
+                  name: nodeName,
+                  parentId,
+                  fill: newProps.fill,
+                  stroke: newProps.stroke,
+                  strokeWeight: newProps.strokeWeight
+                })) as Record<string, unknown>
+                break
+              case 'VECTOR':
+                if (newProps.vectorPaths && newProps.vectorPaths.length > 0) {
+                  createdNode = (await sendCommand('create-vector', {
+                    x,
+                    y,
+                    path: newProps.vectorPaths[0],
+                    name: nodeName,
+                    parentId,
+                    fill: newProps.fill,
+                    stroke: newProps.stroke,
+                    strokeWeight: newProps.strokeWeight
+                  })) as Record<string, unknown>
+                } else {
+                  createdNode = (await sendCommand('create-rectangle', {
+                    x,
+                    y,
+                    width,
+                    height,
+                    name: nodeName,
+                    parentId,
+                    fill: newProps.fill
+                  })) as Record<string, unknown>
+                }
+                break
+              case 'COMPONENT':
+                createdNode = (await sendCommand('create-component', {
+                  x,
+                  y,
+                  width,
+                  height,
+                  name: nodeName ?? 'Component',
+                  parentId,
+                  fill: newProps.fill
+                })) as Record<string, unknown>
+                break
+              default:
+                // Default: create a frame for unknown types
+                createdNode = (await sendCommand('create-frame', {
+                  x,
+                  y,
+                  width,
+                  height,
+                  name: nodeName,
+                  parentId,
+                  fill: newProps.fill
+                })) as Record<string, unknown>
+                break
+            }
+
+            const createdId =
+              (createdNode?.id as string) ?? (createdNode?.nodeId as string) ?? 'new'
+
+            // Apply additional properties that aren't covered by create commands
+            if (createdId && createdId !== 'new') {
+              if (newProps.visible === false) {
+                await sendCommand('set-visibility', { id: createdId, visible: false })
+              }
+              if (newProps.locked === true) {
+                await sendCommand('set-locked', { id: createdId, locked: true })
+              }
+              if (newProps.rotation && newProps.type !== 'LINE') {
+                await sendCommand('set-rotation', { id: createdId, rotation: newProps.rotation })
+              }
+              if (newProps.blendMode) {
+                await sendCommand('set-blend-mode', { id: createdId, mode: newProps.blendMode })
+              }
+            }
+
+            results.push({
+              nodeId: createdId,
+              path,
+              status: 'created',
+              changes: newProps as unknown as Record<string, unknown>
+            })
+          } catch (e) {
+            results.push({
+              nodeId: 'new',
+              path,
+              status: 'failed',
+              error: `CREATE failed: ${String(e)}`
+            })
+          }
           continue
         }
 

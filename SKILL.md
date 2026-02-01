@@ -110,7 +110,17 @@ In JSX:
 
 ## Images
 
-Load images from URL:
+Create image nodes from URL, local file, or data URI:
+
+```bash
+bun run dist/cli/index.js create image https://example.com/photo.jpg --x 100 --y 200
+bun run dist/cli/index.js create image ./screenshot.png --name "Reference"
+bun run dist/cli/index.js create image ./photo.jpg --width 400 --height 300 --scale fit --radius 12
+```
+
+Auto-detects native image dimensions. Supports `--scale` modes: `fill`, `fit`, `crop`, `tile`.
+
+In JSX:
 
 ```tsx
 <Image src="https://example.com/photo.jpg" w={200} h={150} />
@@ -357,7 +367,7 @@ bun run dist/cli/index.js diff create --from <id1> --to <id2>
 
 ⚠️ Context lines need space prefix: ` size: 200 50` not `size: 200 50`
 
-Apply with validation:
+Apply with validation (supports modify, create, and delete operations):
 
 ```bash
 bun run dist/cli/index.js diff apply patch.diff            # Fails if old values don't match
@@ -372,6 +382,30 @@ bun run dist/cli/index.js diff visual --from <id1> --to <id2> --output diff.png
 ```
 
 ⚠️ **After initial render, use diffs or direct commands.** Don't re-render full JSX trees.
+
+## Reconstruct (Image → Figma)
+
+Convert a screenshot or mockup image into a Figma design:
+
+```bash
+# Place reference image and create working frame
+bun run dist/cli/index.js reconstruct ./screenshot.png --name "Login Page"
+
+# With custom position and reference opacity
+bun run dist/cli/index.js reconstruct https://example.com/mockup.png --x 500 --y 0 --ref-opacity 0.2
+
+# Include base64 image data in output (for AI vision analysis)
+bun run dist/cli/index.js reconstruct ./design.png --include-data --json
+```
+
+**AI agent workflow:**
+
+1. `reconstruct ./screenshot.png --json` — places reference image (locked, semi-transparent) and creates empty working frame
+2. AI analyzes the image (via vision) to understand the layout
+3. AI uses `render --parent <workingFrameId>` or `create` commands to build Figma nodes on top
+4. Delete or hide the reference image when done
+
+The command returns `workingFrameId`, dimensions, and position — everything the AI needs to start building.
 
 ## Query (XPath)
 
@@ -399,6 +433,7 @@ XPath functions: `contains()`, `starts-with()`, `string-length()`, `not()`, `and
 bun run dist/cli/index.js create frame --width 400 --height 300 --fill "#FFF" --layout VERTICAL --gap 16
 bun run dist/cli/index.js create text --text "Hello" --font-size 24 --fill "#000"
 bun run dist/cli/index.js create rect --width 100 --height 50 --fill "#F00" --radius 8
+bun run dist/cli/index.js create image ./photo.png --x 100 --y 200
 
 # Find
 bun run dist/cli/index.js query "//FRAME[@name = 'Header']"

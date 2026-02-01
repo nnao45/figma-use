@@ -95,6 +95,7 @@ export interface FigmaNode {
 
   // Effects
   effects?: Effect[]
+  effectStyleId?: string
 
   // Visibility
   visible?: boolean

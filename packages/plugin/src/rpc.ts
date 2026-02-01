@@ -1321,6 +1321,57 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       return serializeNode(node as BaseNode)
     }
 
+    case 'create-image-node': {
+      const { x, y, width, height, name, parentId, url, data, scaleMode, opacity, radius } =
+        args as {
+          x?: number
+          y?: number
+          width?: number
+          height?: number
+          name?: string
+          parentId?: string
+          url?: string
+          data?: string // base64-encoded image data
+          scaleMode?: string
+          opacity?: number
+          radius?: number
+        }
+
+      if (!url && !data) throw new Error('Either url or data (base64) is required')
+
+      let image: Image
+      if (data) {
+        // Create image from base64 data
+        const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0))
+        image = figma.createImage(bytes)
+      } else {
+        image = await figma.createImageAsync(url!)
+      }
+
+      // Get image dimensions for sizing
+      const imageSize = await image.getSizeAsync()
+      const w = width || imageSize.width
+      const h = height || imageSize.height
+
+      const rect = figma.createRectangle()
+      rect.x = x ?? 0
+      rect.y = y ?? 0
+      rect.resize(w, h)
+      rect.name = name || 'Image'
+      rect.fills = [
+        {
+          type: 'IMAGE',
+          imageHash: image.hash,
+          scaleMode: (scaleMode || 'FILL') as 'FILL' | 'FIT' | 'CROP' | 'TILE'
+        }
+      ]
+      if (opacity !== undefined) rect.opacity = opacity
+      if (radius !== undefined) rect.cornerRadius = radius
+
+      await appendToParent(rect, parentId)
+      return serializeNode(rect)
+    }
+
     // ==================== UPDATE PROPERTIES ====================
     case 'rename-node': {
       const { id, name } = args as { id: string; name: string }
@@ -3161,12 +3212,6 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
 
     // ==================== CONNECTORS ====================
     case 'create-connector': {
-      if (figma.editorType !== 'figjam') {
-        throw new Error(
-          'Connectors can only be created in FigJam files. Open a FigJam file and try again.'
-        )
-      }
-
       const {
         fromId,
         toId,
@@ -3198,47 +3243,154 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       if (!toNode || !('absoluteBoundingBox' in toNode))
         throw new Error('To node not found or invalid')
 
-      // Map friendly cap names to FigJam enum values
-      const mapCapCreate = (cap: string): ConnectorStrokeCap => {
-        const mapping: Record<string, ConnectorStrokeCap> = {
-          NONE: 'NONE',
-          ARROW: 'ARROW_EQUILATERAL',
-          ARROW_EQUILATERAL: 'ARROW_EQUILATERAL',
-          ARROW_LINES: 'ARROW_LINES',
-          TRIANGLE: 'TRIANGLE_FILLED',
-          TRIANGLE_FILLED: 'TRIANGLE_FILLED',
-          DIAMOND: 'DIAMOND_FILLED',
-          DIAMOND_FILLED: 'DIAMOND_FILLED',
-          CIRCLE: 'CIRCLE_FILLED',
-          CIRCLE_FILLED: 'CIRCLE_FILLED'
+      if (figma.editorType === 'figjam') {
+        // Native FigJam connector
+        const mapCapCreate = (cap: string): ConnectorStrokeCap => {
+          const mapping: Record<string, ConnectorStrokeCap> = {
+            NONE: 'NONE',
+            ARROW: 'ARROW_EQUILATERAL',
+            ARROW_EQUILATERAL: 'ARROW_EQUILATERAL',
+            ARROW_LINES: 'ARROW_LINES',
+            TRIANGLE: 'TRIANGLE_FILLED',
+            TRIANGLE_FILLED: 'TRIANGLE_FILLED',
+            DIAMOND: 'DIAMOND_FILLED',
+            DIAMOND_FILLED: 'DIAMOND_FILLED',
+            CIRCLE: 'CIRCLE_FILLED',
+            CIRCLE_FILLED: 'CIRCLE_FILLED'
+          }
+          return mapping[cap] || 'NONE'
         }
-        return mapping[cap] || 'NONE'
+
+        const connector = figma.createConnector()
+        connector.connectorStart = {
+          endpointNodeId: fromId,
+          magnet: (fromMagnet as ConnectorMagnet) || 'AUTO'
+        }
+        connector.connectorEnd = {
+          endpointNodeId: toId,
+          magnet: (toMagnet as ConnectorMagnet) || 'AUTO'
+        }
+
+        if (lineType) connector.connectorLineType = lineType
+        if (startCap) connector.connectorStartStrokeCap = mapCapCreate(startCap)
+        if (endCap) connector.connectorEndStrokeCap = mapCapCreate(endCap)
+        if (cornerRadius !== undefined) connector.cornerRadius = cornerRadius
+        if (strokeWeight !== undefined) connector.strokeWeight = strokeWeight
+        if (stroke) {
+          const hex = stroke.replace('#', '')
+          const r = parseInt(hex.slice(0, 2), 16) / 255
+          const g = parseInt(hex.slice(2, 4), 16) / 255
+          const b = parseInt(hex.slice(4, 6), 16) / 255
+          connector.strokes = [{ type: 'SOLID', color: { r, g, b } }]
+        }
+
+        return serializeNode(connector)
       }
 
-      const connector = figma.createConnector()
-      connector.connectorStart = {
-        endpointNodeId: fromId,
-        magnet: (fromMagnet as ConnectorMagnet) || 'AUTO'
-      }
-      connector.connectorEnd = {
-        endpointNodeId: toId,
-        magnet: (toMagnet as ConnectorMagnet) || 'AUTO'
+      // Figma Design fallback: create a line between the two nodes' edges
+      const fromBounds = (fromNode as SceneNode).absoluteBoundingBox
+      const toBounds = (toNode as SceneNode).absoluteBoundingBox
+      if (!fromBounds || !toBounds) throw new Error('Cannot get bounding boxes for nodes')
+
+      const fromCx = fromBounds.x + fromBounds.width / 2
+      const fromCy = fromBounds.y + fromBounds.height / 2
+      const toCx = toBounds.x + toBounds.width / 2
+      const toCy = toBounds.y + toBounds.height / 2
+
+      // Resolve edge points based on magnet or auto (closest edge center)
+      function resolveEdgePoint(
+        cx: number,
+        cy: number,
+        bounds: { x: number; y: number; width: number; height: number },
+        magnet: string | undefined,
+        targetX: number,
+        targetY: number
+      ): { x: number; y: number } {
+        if (magnet) {
+          switch (magnet) {
+            case 'TOP':
+              return { x: cx, y: bounds.y }
+            case 'BOTTOM':
+              return { x: cx, y: bounds.y + bounds.height }
+            case 'LEFT':
+              return { x: bounds.x, y: cy }
+            case 'RIGHT':
+              return { x: bounds.x + bounds.width, y: cy }
+            case 'CENTER':
+              return { x: cx, y: cy }
+          }
+        }
+        // AUTO: pick the edge closest to the target center
+        const edges = [
+          { x: cx, y: bounds.y, dist: 0 }, // top
+          { x: cx, y: bounds.y + bounds.height, dist: 0 }, // bottom
+          { x: bounds.x, y: cy, dist: 0 }, // left
+          { x: bounds.x + bounds.width, y: cy, dist: 0 } // right
+        ]
+        for (const e of edges) {
+          e.dist = Math.hypot(e.x - targetX, e.y - targetY)
+        }
+        edges.sort((a, b) => a.dist - b.dist)
+        return { x: edges[0]!.x, y: edges[0]!.y }
       }
 
-      if (lineType) connector.connectorLineType = lineType
-      if (startCap) connector.connectorStartStrokeCap = mapCapCreate(startCap)
-      if (endCap) connector.connectorEndStrokeCap = mapCapCreate(endCap)
-      if (cornerRadius !== undefined) connector.cornerRadius = cornerRadius
-      if (strokeWeight !== undefined) connector.strokeWeight = strokeWeight
+      const startPt = resolveEdgePoint(fromCx, fromCy, fromBounds, fromMagnet, toCx, toCy)
+      const endPt = resolveEdgePoint(toCx, toCy, toBounds, toMagnet, fromCx, fromCy)
+
+      const dx = endPt.x - startPt.x
+      const dy = endPt.y - startPt.y
+      const length = Math.hypot(dx, dy)
+
+      const line = figma.createLine()
+      line.x = startPt.x
+      line.y = startPt.y
+      if (length > 0) {
+        line.resize(length, 0)
+        const angle = Math.atan2(dy, dx) * (180 / Math.PI)
+        line.rotation = -angle
+      }
+
+      line.name = `Connector: ${fromNode.name} → ${toNode.name}`
+
+      const sw = strokeWeight ?? 1
+      line.strokeWeight = sw
+
       if (stroke) {
         const hex = stroke.replace('#', '')
         const r = parseInt(hex.slice(0, 2), 16) / 255
         const g = parseInt(hex.slice(2, 4), 16) / 255
         const b = parseInt(hex.slice(4, 6), 16) / 255
-        connector.strokes = [{ type: 'SOLID', color: { r, g, b } }]
+        line.strokes = [{ type: 'SOLID', color: { r, g, b } }]
       }
 
-      return serializeNode(connector)
+      // Apply end cap as stroke cap (ARROW_LINES is the closest to an arrowhead)
+      const capMap: Record<string, StrokeCap> = {
+        NONE: 'NONE',
+        ARROW: 'ARROW_LINES',
+        ARROW_EQUILATERAL: 'ARROW_EQUILATERAL',
+        ARROW_LINES: 'ARROW_LINES',
+        TRIANGLE: 'TRIANGLE_FILLED',
+        TRIANGLE_FILLED: 'TRIANGLE_FILLED',
+        DIAMOND: 'DIAMOND_FILLED',
+        DIAMOND_FILLED: 'DIAMOND_FILLED',
+        CIRCLE: 'CIRCLE_FILLED',
+        CIRCLE_FILLED: 'CIRCLE_FILLED'
+      }
+
+      if (startCap && capMap[startCap]) {
+        line.strokeCap = capMap[startCap]!
+      }
+      if (endCap && capMap[endCap]) {
+        line.strokeCap = capMap[endCap]!
+      }
+
+      figma.currentPage.appendChild(line)
+
+      const result = serializeNode(line)
+      ;(result as Record<string, unknown>)._designFileConnector = true
+      ;(result as Record<string, unknown>).fromId = fromId
+      ;(result as Record<string, unknown>).toId = toId
+      return result
     }
 
     case 'get-connector': {
@@ -3572,6 +3724,9 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
             color: 'color' in e ? e.color : undefined,
             offset: 'offset' in e ? e.offset : undefined
           }))
+        }
+        if ('effectStyleId' in node && node.effectStyleId) {
+          result.effectStyleId = node.effectStyleId
         }
 
         // Children (recursive)
