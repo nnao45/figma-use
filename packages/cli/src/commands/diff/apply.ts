@@ -84,14 +84,208 @@ export default defineCommand({
             continue
           }
 
-          // TODO: Create node based on type
-          // For now, we'll skip create operations as they need parent resolution
-          results.push({
-            nodeId: 'new',
-            path,
-            status: 'skipped',
-            error: 'CREATE not yet implemented - use render for new nodes'
-          })
+          try {
+            // Resolve parent from path: "/Parent/Child" → parent is "Parent"
+            const pathParts = path.split('/').filter(Boolean)
+            let parentId: string | undefined
+            if (pathParts.length > 1) {
+              const parentName = pathParts[pathParts.length - 2]
+              if (parentName) {
+                const found = (await sendCommand('find-by-name', {
+                  name: parentName,
+                  exact: true,
+                  limit: 1
+                })) as Array<{ id: string }>
+                if (found && found.length > 0 && found[0]) {
+                  parentId = found[0].id
+                }
+              }
+            }
+
+            const x = newProps.pos?.[0] ?? 0
+            const y = newProps.pos?.[1] ?? 0
+            const width = newProps.size?.[0] ?? 100
+            const height = newProps.size?.[1] ?? 100
+            const nodeName = pathParts[pathParts.length - 1]
+
+            let createdNode: Record<string, unknown> | undefined
+
+            switch (newProps.type) {
+              case 'FRAME':
+                createdNode = (await sendCommand('create-frame', {
+                  x,
+                  y,
+                  width,
+                  height,
+                  name: nodeName,
+                  parentId,
+                  fill: newProps.fill,
+                  stroke: newProps.stroke,
+                  strokeWeight: newProps.strokeWeight,
+                  radius: newProps.radius,
+                  opacity: newProps.opacity
+                })) as Record<string, unknown>
+                break
+              case 'RECTANGLE':
+                createdNode = (await sendCommand('create-rectangle', {
+                  x,
+                  y,
+                  width,
+                  height,
+                  name: nodeName,
+                  parentId,
+                  fill: newProps.fill,
+                  stroke: newProps.stroke,
+                  strokeWeight: newProps.strokeWeight,
+                  radius: newProps.radius,
+                  opacity: newProps.opacity
+                })) as Record<string, unknown>
+                break
+              case 'ELLIPSE':
+                createdNode = (await sendCommand('create-ellipse', {
+                  x,
+                  y,
+                  width,
+                  height,
+                  name: nodeName,
+                  parentId,
+                  fill: newProps.fill,
+                  stroke: newProps.stroke,
+                  strokeWeight: newProps.strokeWeight,
+                  opacity: newProps.opacity
+                })) as Record<string, unknown>
+                break
+              case 'TEXT':
+                createdNode = (await sendCommand('create-text', {
+                  x,
+                  y,
+                  text: newProps.text ?? nodeName ?? 'Text',
+                  fontSize: newProps.fontSize,
+                  fontFamily: newProps.fontFamily,
+                  fill: newProps.fill,
+                  opacity: newProps.opacity,
+                  name: nodeName,
+                  parentId
+                })) as Record<string, unknown>
+                break
+              case 'LINE':
+                createdNode = (await sendCommand('create-line', {
+                  x,
+                  y,
+                  length: width,
+                  rotation: newProps.rotation,
+                  name: nodeName,
+                  parentId,
+                  stroke: newProps.stroke,
+                  strokeWeight: newProps.strokeWeight
+                })) as Record<string, unknown>
+                break
+              case 'POLYGON':
+                createdNode = (await sendCommand('create-polygon', {
+                  x,
+                  y,
+                  size: Math.max(width, height),
+                  name: nodeName,
+                  parentId,
+                  fill: newProps.fill,
+                  stroke: newProps.stroke,
+                  strokeWeight: newProps.strokeWeight
+                })) as Record<string, unknown>
+                break
+              case 'STAR':
+                createdNode = (await sendCommand('create-star', {
+                  x,
+                  y,
+                  size: Math.max(width, height),
+                  name: nodeName,
+                  parentId,
+                  fill: newProps.fill,
+                  stroke: newProps.stroke,
+                  strokeWeight: newProps.strokeWeight
+                })) as Record<string, unknown>
+                break
+              case 'VECTOR':
+                if (newProps.vectorPaths && newProps.vectorPaths.length > 0) {
+                  createdNode = (await sendCommand('create-vector', {
+                    x,
+                    y,
+                    path: newProps.vectorPaths[0],
+                    name: nodeName,
+                    parentId,
+                    fill: newProps.fill,
+                    stroke: newProps.stroke,
+                    strokeWeight: newProps.strokeWeight
+                  })) as Record<string, unknown>
+                } else {
+                  createdNode = (await sendCommand('create-rectangle', {
+                    x,
+                    y,
+                    width,
+                    height,
+                    name: nodeName,
+                    parentId,
+                    fill: newProps.fill
+                  })) as Record<string, unknown>
+                }
+                break
+              case 'COMPONENT':
+                createdNode = (await sendCommand('create-component', {
+                  x,
+                  y,
+                  width,
+                  height,
+                  name: nodeName ?? 'Component',
+                  parentId,
+                  fill: newProps.fill
+                })) as Record<string, unknown>
+                break
+              default:
+                // Default: create a frame for unknown types
+                createdNode = (await sendCommand('create-frame', {
+                  x,
+                  y,
+                  width,
+                  height,
+                  name: nodeName,
+                  parentId,
+                  fill: newProps.fill
+                })) as Record<string, unknown>
+                break
+            }
+
+            const createdId =
+              (createdNode?.id as string) ?? (createdNode?.nodeId as string) ?? 'new'
+
+            // Apply additional properties that aren't covered by create commands
+            if (createdId && createdId !== 'new') {
+              if (newProps.visible === false) {
+                await sendCommand('set-visibility', { id: createdId, visible: false })
+              }
+              if (newProps.locked === true) {
+                await sendCommand('set-locked', { id: createdId, locked: true })
+              }
+              if (newProps.rotation && newProps.type !== 'LINE') {
+                await sendCommand('set-rotation', { id: createdId, rotation: newProps.rotation })
+              }
+              if (newProps.blendMode) {
+                await sendCommand('set-blend-mode', { id: createdId, mode: newProps.blendMode })
+              }
+            }
+
+            results.push({
+              nodeId: createdId,
+              path,
+              status: 'created',
+              changes: newProps as unknown as Record<string, unknown>
+            })
+          } catch (e) {
+            results.push({
+              nodeId: 'new',
+              path,
+              status: 'failed',
+              error: `CREATE failed: ${String(e)}`
+            })
+          }
           continue
         }
 

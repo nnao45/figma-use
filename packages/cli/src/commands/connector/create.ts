@@ -14,8 +14,8 @@ function parseMagnet(value: string): { id: string; magnet?: string } {
   return { id: value }
 }
 
-// NOTE: figma.createConnector() only works in FigJam, not in Figma Design files.
-// TODO: Implement multiplayer-based creation for Figma Design files.
+// NOTE: In FigJam, uses native figma.createConnector().
+// In Figma Design files, creates a line between node edges as a visual connector fallback.
 
 export default defineCommand({
   meta: { description: 'Create a connector between two nodes' },

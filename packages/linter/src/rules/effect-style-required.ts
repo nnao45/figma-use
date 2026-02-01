@@ -17,8 +17,8 @@ export default defineRule({
     const visibleEffects = node.effects.filter((e) => e.visible !== false)
     if (visibleEffects.length === 0) return
 
-    // TODO: Check effectStyleId when we add it to serialization
-    // For now, report any node with effects as potentially missing a style
+    // Skip if node has an effect style bound
+    if (node.effectStyleId) return
 
     const effectDescriptions = visibleEffects.map(describeEffect).join(', ')
 
