@@ -31,6 +31,7 @@ export { default as style } from './style/index.ts'
 export { default as boolean } from './boolean/index.ts'
 export { default as group } from './group/index.ts'
 export { default as component } from './component/index.ts'
+export { default as instance } from './instance/index.ts'
 export { default as connector } from './connector/index.ts'
 
 // Other
