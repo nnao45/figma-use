@@ -85,21 +85,43 @@ export default defineCommand({
           }
 
           try {
-            // Resolve parent from path: "/Parent/Child" → parent is "Parent"
+            // Resolve parent by walking the full path from root
+            // Path format: "/GrandParent/Parent/Child" → walk each segment to find the parent
             const pathParts = path.split('/').filter(Boolean)
             let parentId: string | undefined
             if (pathParts.length > 1) {
-              const parentName = pathParts[pathParts.length - 2]
-              if (parentName) {
+              const parentParts = pathParts.slice(0, -1)
+              // Build an XPath-like query to resolve the exact ancestor chain
+              // e.g., ["Card", "Header"] → //*[@name='Card']/*[@name='Header']
+              let currentId: string | undefined
+              for (const segment of parentParts) {
                 const found = (await sendCommand('find-by-name', {
-                  name: parentName,
+                  name: segment,
                   exact: true,
-                  limit: 1
-                })) as Array<{ id: string }>
-                if (found && found.length > 0 && found[0]) {
-                  parentId = found[0].id
+                  limit: 50
+                })) as Array<{ id: string; parentId?: string }>
+
+                if (!found || found.length === 0) break
+
+                if (!currentId) {
+                  // First segment: pick the first top-level match
+                  currentId = found[0]!.id
+                } else {
+                  // Subsequent segments: find the one that is a child of currentId
+                  const children = (await sendCommand('get-children', {
+                    id: currentId,
+                    depth: 1
+                  })) as Array<{ id: string; name: string }>
+                  const match = children.find((c) => c.name === segment)
+                  if (match) {
+                    currentId = match.id
+                  } else {
+                    // Fallback: use the first global match if not found as child
+                    currentId = found[0]!.id
+                  }
                 }
               }
+              parentId = currentId
             }
 
             const x = newProps.pos?.[0] ?? 0
