@@ -10,6 +10,7 @@ export { default as init } from './init.ts'
 export { default as daemon } from './daemon.ts'
 export { default as query } from './query/index.ts'
 export { default as import } from './import.ts'
+export { default as reconstruct } from './reconstruct.ts'
 export { default as mcp } from './mcp/index.ts'
 export { default as me } from './me.ts'
 

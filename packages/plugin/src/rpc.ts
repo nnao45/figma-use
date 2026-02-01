@@ -1321,6 +1321,57 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       return serializeNode(node as BaseNode)
     }
 
+    case 'create-image-node': {
+      const { x, y, width, height, name, parentId, url, data, scaleMode, opacity, radius } =
+        args as {
+          x?: number
+          y?: number
+          width?: number
+          height?: number
+          name?: string
+          parentId?: string
+          url?: string
+          data?: string // base64-encoded image data
+          scaleMode?: string
+          opacity?: number
+          radius?: number
+        }
+
+      if (!url && !data) throw new Error('Either url or data (base64) is required')
+
+      let image: Image
+      if (data) {
+        // Create image from base64 data
+        const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0))
+        image = figma.createImage(bytes)
+      } else {
+        image = await figma.createImageAsync(url!)
+      }
+
+      // Get image dimensions for sizing
+      const imageSize = await image.getSizeAsync()
+      const w = width || imageSize.width
+      const h = height || imageSize.height
+
+      const rect = figma.createRectangle()
+      rect.x = x ?? 0
+      rect.y = y ?? 0
+      rect.resize(w, h)
+      rect.name = name || 'Image'
+      rect.fills = [
+        {
+          type: 'IMAGE',
+          imageHash: image.hash,
+          scaleMode: (scaleMode || 'FILL') as 'FILL' | 'FIT' | 'CROP' | 'TILE'
+        }
+      ]
+      if (opacity !== undefined) rect.opacity = opacity
+      if (radius !== undefined) rect.cornerRadius = radius
+
+      await appendToParent(rect, parentId)
+      return serializeNode(rect)
+    }
+
     // ==================== UPDATE PROPERTIES ====================
     case 'rename-node': {
       const { id, name } = args as { id: string; name: string }

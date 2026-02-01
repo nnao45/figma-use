@@ -4,6 +4,7 @@ import component from './component.ts'
 import ellipse from './ellipse.ts'
 import frame from './frame.ts'
 import icon from './icon.ts'
+import image from './image.ts'
 import instance from './instance.ts'
 import line from './line.ts'
 import page from './page.ts'
@@ -26,6 +27,7 @@ export default defineCommand({
     vector,
     frame,
     text,
+    image,
     component,
     instance,
     section,
