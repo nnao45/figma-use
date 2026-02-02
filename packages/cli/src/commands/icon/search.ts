@@ -2,14 +2,7 @@ import { defineCommand } from 'citty'
 
 import { handleError } from '../../client.ts'
 import { dim, bold } from '../../format.ts'
-
-interface SearchResult {
-  icons: string[]
-  total: number
-  limit: number
-  start: number
-  collections: Record<string, { name: string; total: number; author?: { name: string } }>
-}
+import { searchIcons } from './api.ts'
 
 export default defineCommand({
   meta: { description: 'Search icons from Iconify (600K+ icons from Lucide, Material Design, etc.)' },
@@ -32,13 +25,10 @@ export default defineCommand({
   },
   async run({ args }) {
     try {
-      const params = new URLSearchParams({ query: args.query, limit: args.limit })
-      if (args.prefix) params.set('prefix', args.prefix)
-
-      const res = await fetch(`https://api.iconify.design/search?${params}`)
-      if (!res.ok) throw new Error(`Iconify API error: ${res.status}`)
-
-      const data: SearchResult = await res.json()
+      const data = await searchIcons(args.query, {
+        prefix: args.prefix,
+        limit: Number(args.limit)
+      })
 
       if (args.json) {
         console.log(JSON.stringify(data, null, 2))

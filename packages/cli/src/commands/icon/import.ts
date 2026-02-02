@@ -1,8 +1,9 @@
 import { defineCommand } from 'citty'
 
-import { sendCommand, printResult, handleError } from '../../client.ts'
+import { sendCommand, handleError } from '../../client.ts'
 import { fail, ok, dim, bold } from '../../format.ts'
 import { loadIconSvg } from '../../render/icon.ts'
+import { pMap } from './api.ts'
 
 const VAR_PREFIX_RE = /^(?:var:|[$])(.+)$/
 
@@ -22,6 +23,16 @@ async function replaceSvgCurrentColor(svg: string, color: string): Promise<strin
   })
 
   return await rewriter.transform(new Response(svg)).text()
+}
+
+// Concurrency for Iconify API fetches (icon SVG loading)
+const FETCH_CONCURRENCY = 5
+// Concurrency for Figma commands (sequential to avoid overloading)
+const FIGMA_CONCURRENCY = 1
+
+interface ImportedIcon {
+  name: string
+  id: string
 }
 
 export default defineCommand({
@@ -58,6 +69,20 @@ export default defineCommand({
 
       console.log(bold(`Importing ${names.length} icons...`))
 
+      // Phase 1: Fetch all icon SVGs concurrently (with concurrency limit)
+      console.log(dim(`  Fetching icon data...`))
+      const iconDataList = await pMap(
+        names,
+        async (name) => {
+          try {
+            return await loadIconSvg(name, size)
+          } catch {
+            return null
+          }
+        },
+        FETCH_CONCURRENCY
+      )
+
       // Create a parent frame if grid mode
       let parentId = args.parent
       if (args.grid) {
@@ -71,7 +96,6 @@ export default defineCommand({
         })) as { id: string }
         parentId = frameResult.id
 
-        // Set auto layout on the frame
         await sendCommand('set-auto-layout', {
           id: parentId,
           direction: 'HORIZONTAL',
@@ -81,22 +105,23 @@ export default defineCommand({
         })
       }
 
-      const results: Array<{ name: string; id: string }> = []
+      // Phase 2: Import into Figma sequentially (Figma plugin can't handle parallel mutations)
+      const results: ImportedIcon[] = []
       const errors: string[] = []
 
       for (let i = 0; i < names.length; i++) {
         const name = names[i]
-        try {
-          const iconData = await loadIconSvg(name, size)
-          if (!iconData) {
-            errors.push(name)
-            console.log(dim(`  ✗ ${name} — not found`))
-            continue
-          }
+        const iconData = iconDataList[i]
 
+        if (!iconData) {
+          errors.push(name)
+          console.log(dim(`  [${i + 1}/${names.length}] ${name} — not found`))
+          continue
+        }
+
+        try {
           const svg = await replaceSvgCurrentColor(iconData.svg, hexColor)
 
-          // Calculate grid position if not using auto layout
           let x = 0
           let y = 0
           if (!args.grid && !parentId) {
@@ -116,7 +141,6 @@ export default defineCommand({
           const iconName = name.replace(':', '/')
           await sendCommand('rename-node', { id: result.id, name: iconName })
 
-          // Bind variable if specified
           if (varMatch) {
             await sendCommand('bind-fill-variable-by-name', {
               id: result.id,
@@ -125,7 +149,6 @@ export default defineCommand({
             })
           }
 
-          // Convert to component if requested
           let finalId = result.id
           if (args.component) {
             const componentResult = (await sendCommand('convert-to-component', {
@@ -135,10 +158,10 @@ export default defineCommand({
           }
 
           results.push({ name, id: finalId })
-          console.log(ok(`  ${name}`) + dim(` → ${finalId}`))
+          console.log(ok(`  [${i + 1}/${names.length}] ${name}`) + dim(` → ${finalId}`))
         } catch (err) {
           errors.push(name)
-          console.log(dim(`  ✗ ${name} — ${err instanceof Error ? err.message : 'failed'}`))
+          console.log(dim(`  [${i + 1}/${names.length}] ${name} — ${err instanceof Error ? err.message : 'failed'}`))
         }
       }
 

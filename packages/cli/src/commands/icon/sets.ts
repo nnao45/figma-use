@@ -2,24 +2,7 @@ import { defineCommand } from 'citty'
 
 import { handleError } from '../../client.ts'
 import { dim, bold } from '../../format.ts'
-
-interface CollectionInfo {
-  name: string
-  total: number
-  author?: { name: string; url?: string }
-  license?: { title: string }
-  category?: string
-  palette?: boolean
-  samples?: string[]
-}
-
-interface CollectionDetail {
-  prefix: string
-  title: string
-  total: number
-  uncategorized?: string[]
-  categories?: Record<string, string[]>
-}
+import { listCollections, getCollection } from './api.ts'
 
 export default defineCommand({
   meta: { description: 'List available icon sets or icons in a set' },
@@ -38,13 +21,7 @@ export default defineCommand({
   async run({ args }) {
     try {
       if (args.prefix) {
-        // Show icons in a specific collection
-        const res = await fetch(
-          `https://api.iconify.design/collection?prefix=${args.prefix}&chars=false&aliases=false`
-        )
-        if (!res.ok) throw new Error(`Icon set "${args.prefix}" not found`)
-
-        const data: CollectionDetail = await res.json()
+        const data = await getCollection(args.prefix)
 
         if (args.json) {
           console.log(JSON.stringify(data, null, 2))
@@ -74,10 +51,7 @@ export default defineCommand({
       }
 
       // List all collections
-      const res = await fetch('https://api.iconify.design/collections')
-      if (!res.ok) throw new Error(`Iconify API error: ${res.status}`)
-
-      const data: Record<string, CollectionInfo> = await res.json()
+      const data = await listCollections()
 
       if (args.json) {
         console.log(JSON.stringify(data, null, 2))
