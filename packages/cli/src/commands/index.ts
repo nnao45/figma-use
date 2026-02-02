@@ -37,6 +37,10 @@ export { default as connector } from './connector/index.ts'
 // Icon management
 export { default as icon } from './icon/index.ts'
 
+// Design foundations
+export { default as generate } from './generate/index.ts'
+export { default as template } from './template/index.ts'
+
 // Other
 export { default as comment } from './comment/index.ts'
 export { default as version } from './version/index.ts'
