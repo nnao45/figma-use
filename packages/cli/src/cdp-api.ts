@@ -64,8 +64,14 @@ async function cdpEval<T>(expression: string): Promise<T> {
       }
     })
 
+    ws.addEventListener('close', () => {
+      clearTimeout(timeout)
+      reject(new Error('WebSocket closed before response'))
+    })
+
     ws.addEventListener('error', () => {
       clearTimeout(timeout)
+      ws.close()
       reject(new Error('WebSocket error'))
     })
   })
