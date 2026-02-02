@@ -34,6 +34,9 @@ export { default as component } from './component/index.ts'
 export { default as instance } from './instance/index.ts'
 export { default as connector } from './connector/index.ts'
 
+// Icon management
+export { default as icon } from './icon/index.ts'
+
 // Other
 export { default as comment } from './comment/index.ts'
 export { default as version } from './version/index.ts'
