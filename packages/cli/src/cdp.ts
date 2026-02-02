@@ -87,6 +87,7 @@ async function getWebSocket(): Promise<WebSocket> {
       }
       if (cachedWs === ws) {
         cachedWs = null
+        cachedTarget = null
       }
     })
   })
@@ -148,9 +149,21 @@ export async function getFileKey(): Promise<string> {
 }
 
 export function closeCDP(): void {
+  if (idleTimer) {
+    clearTimeout(idleTimer)
+    idleTimer = null
+  }
+
+  for (const [id, pending] of pendingRequests) {
+    clearTimeout(pending.timer)
+    pending.reject(new Error('CDP connection closed'))
+    pendingRequests.delete(id)
+  }
+
   if (cachedWs) {
-    cachedWs.close()
+    const ws = cachedWs
     cachedWs = null
+    ws.close()
   }
   cachedTarget = null
 }
