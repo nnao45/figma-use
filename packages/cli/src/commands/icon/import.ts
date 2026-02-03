@@ -4,26 +4,9 @@ import { sendCommand, handleError } from '../../client.ts'
 import { fail, ok, dim, bold } from '../../format.ts'
 import { loadIconSvg } from '../../render/icon.ts'
 import { pMap } from './api.ts'
+import { replaceSvgCurrentColor } from './svg-color.ts'
 
 const VAR_PREFIX_RE = /^(?:var:|[$])(.+)$/
-
-/**
- * Replace currentColor in SVG fill/stroke attributes using HTMLRewriter
- */
-async function replaceSvgCurrentColor(svg: string, color: string): Promise<string> {
-  const rewriter = new HTMLRewriter().on('*', {
-    element(el) {
-      if (el.getAttribute('fill') === 'currentColor') {
-        el.setAttribute('fill', color)
-      }
-      if (el.getAttribute('stroke') === 'currentColor') {
-        el.setAttribute('stroke', color)
-      }
-    }
-  })
-
-  return await rewriter.transform(new Response(svg)).text()
-}
 
 // Concurrency for Iconify API fetches (icon SVG loading)
 const FETCH_CONCURRENCY = 5

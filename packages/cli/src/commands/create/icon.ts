@@ -3,26 +3,9 @@ import { defineCommand } from 'citty'
 import { sendCommand, printResult, handleError } from '../../client.ts'
 import { fail } from '../../format.ts'
 import { loadIconSvg } from '../../render/icon.ts'
+import { replaceSvgCurrentColor } from '../icon/svg-color.ts'
 
 const VAR_PREFIX_RE = /^(?:var:|[$])(.+)$/
-
-/**
- * Replace currentColor in SVG fill/stroke attributes using HTMLRewriter
- */
-async function replaceSvgCurrentColor(svg: string, color: string): Promise<string> {
-  const rewriter = new HTMLRewriter().on('*', {
-    element(el) {
-      if (el.getAttribute('fill') === 'currentColor') {
-        el.setAttribute('fill', color)
-      }
-      if (el.getAttribute('stroke') === 'currentColor') {
-        el.setAttribute('stroke', color)
-      }
-    }
-  })
-
-  return await rewriter.transform(new Response(svg)).text()
-}
 
 export default defineCommand({
   meta: { description: 'Create an icon from Iconify' },
@@ -55,7 +38,7 @@ export default defineCommand({
       const hexColor = varMatch ? '#000000' : args.color || '#000000'
 
       // Replace currentColor in fill/stroke attributes
-      const svg = await replaceSvgCurrentColor(iconData.svg, hexColor)
+      const svg = replaceSvgCurrentColor(iconData.svg, hexColor)
 
       // Import SVG
       const result = (await sendCommand('import-svg', {
