@@ -1,6 +1,6 @@
 {
-  "name": "figma-use",
-  "version": "0.11.1",
+  "name": "@nnao45/figma-use",
+  "version": "0.1.2",
   "description": "Control Figma from the command line. Full read/write access for AI agents.",
   "keywords": [
     "ai",
@@ -11,15 +11,18 @@
     "figma",
     "plugin"
   ],
-  "homepage": "https://github.com/dannote/figma-use#readme",
+  "homepage": "https://github.com/nnao45/figma-use#readme",
   "bugs": {
-    "url": "https://github.com/dannote/figma-use/issues"
+    "url": "https://github.com/nnao45/figma-use/issues"
   },
   "license": "MIT",
-  "author": "Danila Poyarkov <dev@dannote.net>",
+  "author": "nnao45",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dannote/figma-use.git"
+    "url": "git+https://github.com/nnao45/figma-use.git"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "bin": {
     "figma-fast": "bin/figma-fast.js",
