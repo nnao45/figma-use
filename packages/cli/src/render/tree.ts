@@ -125,6 +125,26 @@ export interface StyleProps {
   // Other
   src?: string
   href?: string
+
+  // Line stroke caps (for start/end independently)
+  startCap?:
+    | 'none'
+    | 'round'
+    | 'square'
+    | 'arrow'
+    | 'arrow-equilateral'
+    | 'triangle'
+    | 'diamond'
+    | 'circle'
+  endCap?:
+    | 'none'
+    | 'round'
+    | 'square'
+    | 'arrow'
+    | 'arrow-equilateral'
+    | 'triangle'
+    | 'diamond'
+    | 'circle'
 }
 
 // Custom child type that allows TreeNode in JSX

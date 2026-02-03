@@ -196,6 +196,112 @@ describe('render with variables', () => {
   })
 })
 
+describe('render with line stroke caps', () => {
+  let testFrameId: string
+
+  beforeAll(async () => {
+    await setupTestPage('render-line-caps')
+    const frame = (await run(
+      'create frame --x 0 --y 0 --width 600 --height 400 --name "Line Cap Tests" --json'
+    )) as { id: string }
+    testFrameId = frame.id
+    trackNode(testFrameId)
+  }, 30000)
+
+  afterAll(async () => {
+    await teardownTestPage()
+  })
+
+  test('renders Line with endCap arrow', async () => {
+    const jsx = `<Line x={10} y={10} w={200} endCap="arrow" stroke="#000000" strokeWidth={2} />`
+    const result = (await run(
+      `render --stdin --parent "${testFrameId}" --json`,
+      jsx
+    )) as { id: string }
+    trackNode(result.id)
+
+    const nodeInfo = (await run(`node get ${result.id} --json`)) as {
+      type: string
+      strokeWeight?: number
+    }
+    // VectorNetwork is used, so type is VECTOR
+    expect(nodeInfo.type).toBe('VECTOR')
+    expect(nodeInfo.strokeWeight).toBe(2)
+  }, 30000)
+
+  test('renders root Line with endCap arrow as VECTOR', async () => {
+    const jsx = `<Line x={10} y={10} w={200} endCap="arrow" stroke="#000000" strokeWidth={2} />`
+    const result = (await run(`render --stdin --json`, jsx)) as { id: string }
+    trackNode(result.id)
+
+    const nodeInfo = (await run(`node get ${result.id} --json`)) as {
+      type: string
+      strokeWeight?: number
+    }
+    expect(nodeInfo.type).toBe('VECTOR')
+    expect(nodeInfo.strokeWeight).toBe(2)
+  }, 30000)
+
+  test('renders Line with startCap and endCap', async () => {
+    const jsx = `<Line x={10} y={40} w={200} startCap="circle" endCap="arrow-equilateral" stroke="#3B82F6" strokeWidth={3} />`
+    const result = (await run(
+      `render --stdin --parent "${testFrameId}" --json`,
+      jsx
+    )) as { id: string }
+    trackNode(result.id)
+
+    const nodeInfo = (await run(`node get ${result.id} --json`)) as {
+      type: string
+      strokeWeight?: number
+    }
+    expect(nodeInfo.type).toBe('VECTOR')
+    expect(nodeInfo.strokeWeight).toBe(3)
+  }, 30000)
+
+  test('renders Line with diamond caps', async () => {
+    const jsx = `<Line x={10} y={70} w={200} startCap="diamond" endCap="diamond" stroke="#EF4444" strokeWidth={2} />`
+    const result = (await run(
+      `render --stdin --parent "${testFrameId}" --json`,
+      jsx
+    )) as { id: string }
+    trackNode(result.id)
+
+    const nodeInfo = (await run(`node get ${result.id} --json`)) as {
+      type: string
+    }
+    expect(nodeInfo.type).toBe('VECTOR')
+  }, 30000)
+
+  test('renders Line with triangle cap', async () => {
+    const jsx = `<Line x={10} y={100} w={200} endCap="triangle" stroke="#10B981" strokeWidth={2} />`
+    const result = (await run(
+      `render --stdin --parent "${testFrameId}" --json`,
+      jsx
+    )) as { id: string }
+    trackNode(result.id)
+
+    const nodeInfo = (await run(`node get ${result.id} --json`)) as {
+      type: string
+    }
+    expect(nodeInfo.type).toBe('VECTOR')
+  }, 30000)
+
+  test('renders Line without caps as LINE type', async () => {
+    const jsx = `<Line x={10} y={130} w={200} stroke="#666666" strokeWidth={1} />`
+    const result = (await run(
+      `render --stdin --parent "${testFrameId}" --json`,
+      jsx
+    )) as { id: string }
+    trackNode(result.id)
+
+    const nodeInfo = (await run(`node get ${result.id} --json`)) as {
+      type: string
+    }
+    // Without caps, it stays as LINE
+    expect(nodeInfo.type).toBe('LINE')
+  }, 30000)
+})
+
 describe('render with instances', () => {
   test('renders component instance via <Instance>', async () => {
     const { run, trackNode, setupTestPage, teardownTestPage } = await import('../helpers.ts')

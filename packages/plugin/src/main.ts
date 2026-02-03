@@ -57,6 +57,42 @@ function loadFont(family: string, style: string): Promise<void> | void {
   return promise
 }
 
+const LINE_CAP_VALUES = [
+  'none',
+  'round',
+  'square',
+  'arrow',
+  'arrow-lines',
+  'arrow-equilateral',
+  'triangle',
+  'diamond',
+  'circle'
+]
+
+const LINE_CAP_MAP: Record<string, StrokeCap> = {
+  none: 'NONE',
+  round: 'ROUND',
+  square: 'SQUARE',
+  arrow: 'ARROW_LINES',
+  'arrow-lines': 'ARROW_LINES',
+  'arrow-equilateral': 'ARROW_EQUILATERAL',
+  triangle: 'TRIANGLE_FILLED',
+  diamond: 'DIAMOND_FILLED',
+  circle: 'CIRCLE_FILLED'
+}
+
+function normalizeLineCap(cap?: string): StrokeCap | undefined {
+  if (!cap) return undefined
+  const key = cap.toLowerCase()
+  const mapped = LINE_CAP_MAP[key]
+  if (!mapped) {
+    throw new Error(
+      `Invalid stroke cap "${cap}". Allowed: ${LINE_CAP_VALUES.map((v) => `"${v}"`).join(', ')}`
+    )
+  }
+  return mapped
+}
+
 // Fast node creation for batch operations - skips full serialization
 async function createNodeFast(
   command: string,
@@ -589,16 +625,50 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
     }
 
     case 'create-line': {
-      const { x, y, length, rotation, name, parentId, stroke, strokeWeight } = args as {
-        x: number
-        y: number
-        length: number
-        rotation?: number
-        name?: string
-        parentId?: string
-        stroke?: string
-        strokeWeight?: number
+      const { x, y, length, rotation, name, parentId, stroke, strokeWeight, startCap, endCap } =
+        args as {
+          x: number
+          y: number
+          length: number
+          rotation?: number
+          name?: string
+          parentId?: string
+          stroke?: string
+          strokeWeight?: number
+          startCap?: string
+          endCap?: string
+        }
+      const startCapValue = normalizeLineCap(startCap)
+      const endCapValue = normalizeLineCap(endCap)
+      const useVector =
+        (startCapValue && startCapValue !== 'NONE') || (endCapValue && endCapValue !== 'NONE')
+
+      // If caps are specified, use VectorNetwork for independent start/end caps
+      if (useVector) {
+        const vector = figma.createVector()
+        vector.x = x
+        vector.y = y
+
+        vector.vectorNetwork = {
+          vertices: [
+            { x: 0, y: 0, strokeCap: startCapValue ?? 'NONE' },
+            { x: length, y: 0, strokeCap: endCapValue ?? 'NONE' }
+          ],
+          segments: [
+            { start: 0, end: 1, tangentStart: { x: 0, y: 0 }, tangentEnd: { x: 0, y: 0 } }
+          ],
+          regions: []
+        }
+
+        if (stroke) vector.strokes = [await createSolidPaint(stroke)]
+        if (strokeWeight !== undefined) vector.strokeWeight = strokeWeight
+        if (rotation) vector.rotation = rotation
+        if (name) vector.name = name
+        await appendToParent(vector, parentId)
+        return serializeNode(vector)
       }
+
+      // No caps specified - use simple Line
       const line = figma.createLine()
       line.x = x
       line.y = y

@@ -102,6 +102,41 @@ describe('create', () => {
       trackNode(line.id)
       expect(line.type).toBe('LINE')
     })
+
+    test('creates line with end-cap arrow', async () => {
+      const line = (await run(
+        `create line --x 100 --y 100 --length 100 --end-cap arrow --stroke "#000000" --stroke-weight 2 --name "ArrowLine" --parent "${testFrameId}" --json`
+      )) as any
+      trackNode(line.id)
+      // VectorNetwork is used, so type is VECTOR
+      expect(line.type).toBe('VECTOR')
+      expect(line.name).toBe('ArrowLine')
+    })
+
+    test('creates line with both start and end caps', async () => {
+      const line = (await run(
+        `create line --x 100 --y 120 --length 100 --start-cap circle --end-cap arrow-equilateral --stroke "#3B82F6" --stroke-weight 3 --name "BothCaps" --parent "${testFrameId}" --json`
+      )) as any
+      trackNode(line.id)
+      expect(line.type).toBe('VECTOR')
+      expect(line.strokeWeight).toBe(3)
+    })
+
+    test('creates line with triangle cap', async () => {
+      const line = (await run(
+        `create line --x 100 --y 140 --length 100 --end-cap triangle --stroke "#EF4444" --stroke-weight 2 --parent "${testFrameId}" --json`
+      )) as any
+      trackNode(line.id)
+      expect(line.type).toBe('VECTOR')
+    })
+
+    test('creates line with diamond cap', async () => {
+      const line = (await run(
+        `create line --x 100 --y 160 --length 100 --start-cap diamond --end-cap diamond --stroke "#10B981" --stroke-weight 2 --parent "${testFrameId}" --json`
+      )) as any
+      trackNode(line.id)
+      expect(line.type).toBe('VECTOR')
+    })
   })
 
   describe('polygon', () => {

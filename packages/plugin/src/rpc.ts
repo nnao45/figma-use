@@ -55,6 +55,42 @@ function loadFont(family: string, style: string): Promise<void> | void {
   return promise
 }
 
+const LINE_CAP_VALUES = [
+  'none',
+  'round',
+  'square',
+  'arrow',
+  'arrow-lines',
+  'arrow-equilateral',
+  'triangle',
+  'diamond',
+  'circle'
+]
+
+const LINE_CAP_MAP: Record<string, StrokeCap> = {
+  none: 'NONE',
+  round: 'ROUND',
+  square: 'SQUARE',
+  arrow: 'ARROW_LINES',
+  'arrow-lines': 'ARROW_LINES',
+  'arrow-equilateral': 'ARROW_EQUILATERAL',
+  triangle: 'TRIANGLE_FILLED',
+  diamond: 'DIAMOND_FILLED',
+  circle: 'CIRCLE_FILLED'
+}
+
+function normalizeLineCap(cap?: string): StrokeCap | undefined {
+  if (!cap) return undefined
+  const key = cap.toLowerCase()
+  const mapped = LINE_CAP_MAP[key]
+  if (!mapped) {
+    throw new Error(
+      `Invalid stroke cap "${cap}". Allowed: ${LINE_CAP_VALUES.map((v) => `"${v}"`).join(', ')}`
+    )
+  }
+  return mapped
+}
+
 // Fast node creation for batch operations - skips full serialization
 async function createNodeFast(
   command: string,
@@ -863,16 +899,50 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
     }
 
     case 'create-line': {
-      const { x, y, length, rotation, name, parentId, stroke, strokeWeight } = args as {
-        x: number
-        y: number
-        length: number
-        rotation?: number
-        name?: string
-        parentId?: string
-        stroke?: string
-        strokeWeight?: number
+      const { x, y, length, rotation, name, parentId, stroke, strokeWeight, startCap, endCap } =
+        args as {
+          x: number
+          y: number
+          length: number
+          rotation?: number
+          name?: string
+          parentId?: string
+          stroke?: string
+          strokeWeight?: number
+          startCap?: string
+          endCap?: string
+        }
+      const startCapValue = normalizeLineCap(startCap)
+      const endCapValue = normalizeLineCap(endCap)
+      const useVector =
+        (startCapValue && startCapValue !== 'NONE') || (endCapValue && endCapValue !== 'NONE')
+
+      // If caps are specified, use VectorNetwork for independent start/end caps
+      if (useVector) {
+        const vector = figma.createVector()
+        vector.x = x
+        vector.y = y
+
+        vector.vectorNetwork = {
+          vertices: [
+            { x: 0, y: 0, strokeCap: startCapValue ?? 'NONE' },
+            { x: length, y: 0, strokeCap: endCapValue ?? 'NONE' }
+          ],
+          segments: [
+            { start: 0, end: 1, tangentStart: { x: 0, y: 0 }, tangentEnd: { x: 0, y: 0 } }
+          ],
+          regions: []
+        }
+
+        if (stroke) vector.strokes = [await createSolidPaint(stroke)]
+        if (strokeWeight !== undefined) vector.strokeWeight = strokeWeight
+        if (rotation) vector.rotation = rotation
+        if (name) vector.name = name
+        await appendToParent(vector, parentId)
+        return serializeNode(vector)
       }
+
+      // No caps specified - use simple Line
       const line = figma.createLine()
       line.x = x
       line.y = y
@@ -2390,7 +2460,9 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
         overflow: '__overflow',
         shadow: '__shadow',
         blur: '__blur',
-        blendMode: '__blendMode'
+        blendMode: '__blendMode',
+        startCap: '__startCap',
+        endCap: '__endCap'
       }
 
       const DIRECTION_MAP: Record<string, string> = {
@@ -2433,6 +2505,17 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
         shadow?: string
         blur?: number
         blendMode?: string
+        startCap?: string
+        endCap?: string
+      }> = []
+
+      // Nodes that need vector replacement for stroke caps
+      const lineCapNodes: Array<{
+        path: number[]
+        startCap?: StrokeCap
+        endCap?: StrokeCap
+        stroke?: string
+        strokeWidth?: number
       }> = []
 
       function processProps(
@@ -2548,6 +2631,33 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
         const isText = type === 'text'
         const processed = processProps(props || {}, isText)
 
+        // Handle <line> with startCap/endCap - mark for VectorNetwork replacement
+        if (type === 'line' && (props.startCap || props.endCap)) {
+          const startCapValue = normalizeLineCap(props.startCap as string | undefined)
+          const endCapValue = normalizeLineCap(props.endCap as string | undefined)
+          const useVector =
+            (startCapValue && startCapValue !== 'NONE') || (endCapValue && endCapValue !== 'NONE')
+
+          if (useVector) {
+            lineCapNodes.push({
+              path: [...path],
+              startCap: startCapValue,
+              endCap: endCapValue,
+              stroke: processed.stroke as string | undefined,
+              strokeWidth: processed.strokeWidth as number | undefined
+            })
+          }
+
+          // Don't pass startCap/endCap to Widget Line
+          const cleanProps = { ...processed }
+          delete cleanProps.startCap
+          delete cleanProps.endCap
+          delete cleanProps.__startCap
+          delete cleanProps.__endCap
+          // Create normal Line as placeholder
+          return h(Line, cleanProps)
+        }
+
         // Track wrap nodes
         if (processed.__wrap) {
           wrapNodes.push({ path: [...path], rowGap: processed.__rowGap as number | undefined })
@@ -2579,7 +2689,9 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
           '__overflow',
           '__shadow',
           '__blur',
-          '__blendMode'
+          '__blendMode',
+          '__startCap',
+          '__endCap'
         ]
         for (const key of postKeys) {
           if (processed[key] !== undefined) {
@@ -2602,7 +2714,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       }
 
       const widgetTree = buildTree(tree)
-      const node = await figma.createNodeFromJSXAsync(
+      let node = await figma.createNodeFromJSXAsync(
         widgetTree as Parameters<typeof figma.createNodeFromJSXAsync>[0]
       )
 
@@ -2794,6 +2906,94 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
           node.remove()
           // Update node reference for parent attachment
           ;(node as unknown as { id: string }).id = instance.id
+        }
+      }
+
+      // Replace Line placeholders with Vector nodes for stroke cap support
+      const copyLineStyle = (from: LineNode, to: VectorNode) => {
+        const keys = [
+          'visible',
+          'locked',
+          'opacity',
+          'blendMode',
+          'effects',
+          'effectStyleId',
+          'fills',
+          'fillStyleId',
+          'strokes',
+          'strokeStyleId',
+          'strokeAlign',
+          'strokeJoin',
+          'strokeMiterLimit',
+          'dashPattern',
+          'layoutAlign',
+          'layoutGrow',
+          'layoutPositioning',
+          'constraints'
+        ]
+        for (const key of keys) {
+          const value = (from as Record<string, unknown>)[key]
+          if (value !== undefined && value !== figma.mixed) {
+            ;(to as Record<string, unknown>)[key] = value
+          }
+        }
+      }
+      for (const { path, startCap, endCap, stroke, strokeWidth } of lineCapNodes) {
+        let target: SceneNode = node
+        let parent: FrameNode | null = null
+        let childIndex = 0
+        for (let i = 0; i < path.length; i++) {
+          if ('children' in target) {
+            parent = target as FrameNode
+            childIndex = path[i]
+            target = parent.children[childIndex]
+          }
+        }
+        if (target && target.type === 'LINE') {
+          const lineNode = target as LineNode
+          const vector = figma.createVector()
+          vector.x = lineNode.x
+          vector.y = lineNode.y
+          vector.name = lineNode.name
+          vector.rotation = lineNode.rotation
+          const length = lineNode.width
+
+          vector.vectorNetwork = {
+            vertices: [
+              { x: 0, y: 0, strokeCap: startCap ?? 'NONE' },
+              { x: length, y: 0, strokeCap: endCap ?? 'NONE' }
+            ],
+            segments: [
+              { start: 0, end: 1, tangentStart: { x: 0, y: 0 }, tangentEnd: { x: 0, y: 0 } }
+            ],
+            regions: []
+          }
+
+          // Copy stroke properties
+          if (stroke) {
+            vector.strokes = [await createSolidPaint(stroke)]
+          } else if (lineNode.strokes.length > 0) {
+            vector.strokes = [...lineNode.strokes]
+          }
+          if (strokeWidth !== undefined) {
+            vector.strokeWeight = strokeWidth
+          } else {
+            vector.strokeWeight = lineNode.strokeWeight
+          }
+
+          copyLineStyle(lineNode, vector)
+
+          const lineParent = lineNode.parent
+          if (lineParent && 'insertChild' in lineParent) {
+            const index = lineParent.children.indexOf(lineNode as SceneNode)
+            lineParent.insertChild(index === -1 ? childIndex : index, vector)
+            lineNode.remove()
+            if (path.length === 0) node = vector
+          } else {
+            figma.currentPage.appendChild(vector)
+            lineNode.remove()
+            if (path.length === 0) node = vector
+          }
         }
       }
 

@@ -92,6 +92,20 @@ Use `<Instance>` to create component instances:
 
 ⚠️ **Always use `--x` and `--y`** to position renders. Don't stack everything at (0, 0).
 
+## Line Caps
+
+Line caps are supported in both command and JSX render modes.
+
+```bash
+bun run dist/cli/index.js create line --length 120 --stroke "#111" --start-cap arrow --end-cap circle
+```
+
+```tsx
+<Line x={0} y={0} w={120} stroke="#111" strokeWidth={2} startCap="arrow" endCap="circle" />
+```
+
+Allowed values: `none`, `round`, `square`, `arrow`, `arrow-lines`, `arrow-equilateral`, `triangle`, `diamond`, `circle`.
+
 ## Icons
 
 150k+ icons from Iconify by name:

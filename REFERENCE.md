@@ -45,6 +45,7 @@ figma-use create rect --width 100 --height 50 --fill "#FF0000" --radius 8
 figma-use create ellipse --width 80 --height 80 --fill "#00FF00"
 figma-use create text --text "Hello" --font-size 24 --fill "#000"
 figma-use create line --length 100 --stroke "#000"
+figma-use create line --length 100 --stroke "#000" --start-cap arrow --end-cap circle
 figma-use create polygon --sides 6 --radius 50 --fill "#0000FF"
 figma-use create star --points 5 --inner-radius 20 --outer-radius 50 --fill "#FFD700"
 figma-use create vector --path "M 0 0 L 100 50 L 0 100 Z" --fill "#F00"
@@ -60,6 +61,8 @@ figma-use create icon lucide:star --size 48 --component  # as Figma component
 All create commands support `--x`, `--y`, `--parent <id>`, `--name "Name"`.
 
 Color options (`--fill`, `--stroke`, `--color`) accept hex (`#RGB`, `#RRGGBB`, `#RRGGBBAA`) or variable references (`var:Colors/Primary`, `$Colors/Primary`).
+
+Line caps: `--start-cap` / `--end-cap` support `none`, `round`, `square`, `arrow`, `arrow-lines`, `arrow-equilateral`, `triangle`, `diamond`, `circle`.
 
 ## Set (Modify)
 
