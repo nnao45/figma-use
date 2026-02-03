@@ -17,13 +17,55 @@ let cachedTarget: CDPTarget | null = null
 let messageId = 0
 let idleTimer: ReturnType<typeof setTimeout> | null = null
 const IDLE_TIMEOUT = 100
+const CONNECTION_TIMEOUT = 5000 // 5 seconds for initial connection
+const MAX_RETRIES = 4
 
 const pendingRequests = new Map<number, PendingRequest>()
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  retries = MAX_RETRIES,
+  baseDelay = 1000
+): Promise<T> {
+  let lastError: Error | undefined
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn()
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e))
+      if (attempt < retries) {
+        const delay = baseDelay * Math.pow(2, attempt) // 1s, 2s, 4s
+        await new Promise((resolve) => setTimeout(resolve, delay))
+      }
+    }
+  }
+  throw lastError
+}
 
 async function getCDPTarget(): Promise<CDPTarget> {
   if (cachedTarget) return cachedTarget
 
-  const resp = await fetch('http://localhost:9222/json')
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), CONNECTION_TIMEOUT)
+
+  let resp: Response
+  try {
+    resp = await fetch('http://localhost:9222/json', { signal: controller.signal })
+  } catch (e) {
+    clearTimeout(timeoutId)
+    if (e instanceof Error && e.name === 'AbortError') {
+      throw new Error(
+        'CDP connection timeout.\n' +
+          'Make sure Figma is started with: open -a Figma --args --remote-debugging-port=9222'
+      )
+    }
+    throw new Error(
+      'Failed to connect to CDP.\n' +
+        'Make sure Figma is started with: open -a Figma --args --remote-debugging-port=9222'
+    )
+  }
+  clearTimeout(timeoutId)
+
   const targets = (await resp.json()) as CDPTarget[]
 
   const figmaTarget =
@@ -63,23 +105,33 @@ function handleMessage(event: MessageEvent): void {
   }
 }
 
-async function getWebSocket(): Promise<WebSocket> {
-  if (cachedWs?.readyState === WebSocket.OPEN) return cachedWs
-
-  const target = await getCDPTarget()
-
+async function connectWebSocket(target: CDPTarget): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(target.webSocketDebuggerUrl)
+    let connected = false
+
+    const connectionTimer = setTimeout(() => {
+      if (!connected) {
+        ws.close()
+        reject(new Error('WebSocket connection timeout'))
+      }
+    }, CONNECTION_TIMEOUT)
 
     ws.addEventListener('open', () => {
+      connected = true
+      clearTimeout(connectionTimer)
       cachedWs = ws
       ws.addEventListener('message', handleMessage)
       resolve(ws)
     })
 
-    ws.addEventListener('error', () => reject(new Error('WebSocket connection failed')))
+    ws.addEventListener('error', () => {
+      clearTimeout(connectionTimer)
+      reject(new Error('WebSocket connection failed'))
+    })
 
     ws.addEventListener('close', () => {
+      clearTimeout(connectionTimer)
       for (const [id, pending] of pendingRequests) {
         clearTimeout(pending.timer)
         pending.reject(new Error('WebSocket closed'))
@@ -90,6 +142,17 @@ async function getWebSocket(): Promise<WebSocket> {
         cachedTarget = null
       }
     })
+  })
+}
+
+async function getWebSocket(): Promise<WebSocket> {
+  if (cachedWs?.readyState === WebSocket.OPEN) return cachedWs
+
+  return withRetry(async () => {
+    // Clear cached target on retry to force re-fetch
+    cachedTarget = null
+    const target = await getCDPTarget()
+    return connectWebSocket(target)
   })
 }
 
