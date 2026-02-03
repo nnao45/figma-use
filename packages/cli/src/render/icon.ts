@@ -5,9 +5,25 @@ import { iconToSVG } from '@iconify/utils'
 
 import type { ReactNode } from './mini-react.ts'
 import type { Props, ReactElement } from './tree.ts'
-import type { IconifyIcon } from '@iconify/types'
+import type { IconifyIcon, IconifyJSON } from '@iconify/types'
 
-// Initialize API module
+// Bundled icon sets (loaded on first use)
+import { icons as lucideIcons } from '@iconify-json/lucide'
+import { icons as mdiIcons } from '@iconify-json/mdi'
+import { icons as tablerIcons } from '@iconify-json/tabler'
+import { icons as heroiconsIcons } from '@iconify-json/heroicons'
+import { icons as phIcons } from '@iconify-json/ph'
+
+// Map of bundled icon sets
+const bundledIconSets: Record<string, IconifyJSON> = {
+  lucide: lucideIcons,
+  mdi: mdiIcons,
+  tabler: tablerIcons,
+  heroicons: heroiconsIcons,
+  ph: phIcons,
+}
+
+// Initialize API module (for fallback to remote API)
 setAPIModule('', fetchAPIModule)
 
 export interface IconData {
@@ -24,13 +40,43 @@ const iconCache = new Map<string, IconData>()
 const rawIconCache = new Map<string, IconifyIcon>()
 
 /**
+ * Try to get icon from bundled icon sets
+ */
+function getBundledIcon(name: string): IconifyIcon | null {
+  const [prefix, iconName] = name.split(':')
+  if (!prefix || !iconName) return null
+
+  const iconSet = bundledIconSets[prefix]
+  if (!iconSet) return null
+
+  const iconData = iconSet.icons[iconName]
+  if (!iconData) return null
+
+  // Merge with default values from the icon set
+  return {
+    ...iconData,
+    width: iconData.width ?? iconSet.width ?? 24,
+    height: iconData.height ?? iconSet.height ?? 24,
+  }
+}
+
+/**
  * Load raw icon data (without size transformation)
+ * Tries bundled icon sets first, falls back to API
  */
 async function loadRawIcon(name: string): Promise<IconifyIcon | null> {
   if (rawIconCache.has(name)) {
     return rawIconCache.get(name)!
   }
 
+  // Try bundled icon sets first (no network needed)
+  const bundledIcon = getBundledIcon(name)
+  if (bundledIcon) {
+    rawIconCache.set(name, bundledIcon)
+    return bundledIcon
+  }
+
+  // Fallback to API for non-bundled icon sets
   const icon = await loadIcon(name)
   if (!icon) {
     return null
@@ -96,20 +142,33 @@ export async function preloadIcons(icons: Array<{ name: string; size?: number }>
 }
 
 /**
+ * Get list of bundled icon set prefixes
+ */
+export const bundledIconSetPrefixes = Object.keys(bundledIconSets)
+
+/**
+ * Check if an icon set is bundled (available offline)
+ */
+export function isIconSetBundled(prefix: string): boolean {
+  return prefix in bundledIconSets
+}
+
+/**
  * Get list of popular icon sets
+ * Sets marked with (bundled) are available offline
  */
 export const iconSets = {
-  mdi: 'Material Design Icons',
-  lucide: 'Lucide',
-  heroicons: 'Heroicons',
+  lucide: 'Lucide (bundled)',
+  mdi: 'Material Design Icons (bundled)',
+  tabler: 'Tabler Icons (bundled)',
+  heroicons: 'Heroicons (bundled)',
+  ph: 'Phosphor (bundled)',
   'heroicons-outline': 'Heroicons Outline',
   'heroicons-solid': 'Heroicons Solid',
-  tabler: 'Tabler Icons',
   'fa-solid': 'Font Awesome Solid',
   'fa-regular': 'Font Awesome Regular',
   'fa-brands': 'Font Awesome Brands',
   ri: 'Remix Icon',
-  ph: 'Phosphor',
   'ph-bold': 'Phosphor Bold',
   'ph-fill': 'Phosphor Fill',
   carbon: 'Carbon',
