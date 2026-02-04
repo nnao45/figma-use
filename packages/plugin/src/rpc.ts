@@ -899,6 +899,29 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
     }
 
     case 'create-line': {
+      const { x, y, length, rotation, name, parentId, stroke, strokeWeight } = args as {
+        x: number
+        y: number
+        length: number
+        rotation?: number
+        name?: string
+        parentId?: string
+        stroke?: string
+        strokeWeight?: number
+      }
+      const line = figma.createLine()
+      line.x = x
+      line.y = y
+      line.resize(length, 0)
+      if (rotation) line.rotation = rotation
+      if (name) line.name = name
+      if (stroke) line.strokes = [await createSolidPaint(stroke)]
+      if (strokeWeight !== undefined) line.strokeWeight = strokeWeight
+      await appendToParent(line, parentId)
+      return serializeNode(line)
+    }
+
+    case 'create-arrow': {
       const { x, y, length, rotation, name, parentId, stroke, strokeWeight, startCap, endCap } =
         args as {
           x: number
@@ -912,47 +935,28 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
           startCap?: string
           endCap?: string
         }
-      const startCapValue = normalizeLineCap(startCap)
-      const endCapValue = normalizeLineCap(endCap)
-      const useVector =
-        (startCapValue && startCapValue !== 'NONE') || (endCapValue && endCapValue !== 'NONE')
+      const startCapValue = normalizeLineCap(startCap) ?? 'NONE'
+      const endCapValue = normalizeLineCap(endCap) ?? 'ARROW_LINES'
 
-      // If caps are specified, use VectorNetwork for independent start/end caps
-      if (useVector) {
-        const vector = figma.createVector()
-        vector.x = x
-        vector.y = y
+      const vector = figma.createVector()
+      vector.x = x
+      vector.y = y
+      vector.name = name || 'Arrow'
 
-        vector.vectorNetwork = {
-          vertices: [
-            { x: 0, y: 0, strokeCap: startCapValue ?? 'NONE' },
-            { x: length, y: 0, strokeCap: endCapValue ?? 'NONE' }
-          ],
-          segments: [
-            { start: 0, end: 1, tangentStart: { x: 0, y: 0 }, tangentEnd: { x: 0, y: 0 } }
-          ],
-          regions: []
-        }
-
-        if (stroke) vector.strokes = [await createSolidPaint(stroke)]
-        if (strokeWeight !== undefined) vector.strokeWeight = strokeWeight
-        if (rotation) vector.rotation = rotation
-        if (name) vector.name = name
-        await appendToParent(vector, parentId)
-        return serializeNode(vector)
+      vector.vectorNetwork = {
+        vertices: [
+          { x: 0, y: 0, strokeCap: startCapValue },
+          { x: length, y: 0, strokeCap: endCapValue }
+        ],
+        segments: [{ start: 0, end: 1, tangentStart: { x: 0, y: 0 }, tangentEnd: { x: 0, y: 0 } }],
+        regions: []
       }
 
-      // No caps specified - use simple Line
-      const line = figma.createLine()
-      line.x = x
-      line.y = y
-      line.resize(length, 0)
-      if (rotation) line.rotation = rotation
-      if (name) line.name = name
-      if (stroke) line.strokes = [await createSolidPaint(stroke)]
-      if (strokeWeight !== undefined) line.strokeWeight = strokeWeight
-      await appendToParent(line, parentId)
-      return serializeNode(line)
+      if (stroke) vector.strokes = [await createSolidPaint(stroke)]
+      if (strokeWeight !== undefined) vector.strokeWeight = strokeWeight
+      if (rotation) vector.rotation = rotation
+      await appendToParent(vector, parentId)
+      return serializeNode(vector)
     }
 
     case 'create-polygon': {
@@ -2631,30 +2635,25 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
         const isText = type === 'text'
         const processed = processProps(props || {}, isText)
 
-        // Handle <line> with startCap/endCap - mark for VectorNetwork replacement
-        if (type === 'line' && (props.startCap || props.endCap)) {
-          const startCapValue = normalizeLineCap(props.startCap as string | undefined)
-          const endCapValue = normalizeLineCap(props.endCap as string | undefined)
-          const useVector =
-            (startCapValue && startCapValue !== 'NONE') || (endCapValue && endCapValue !== 'NONE')
+        // Handle <arrow> - mark for VectorNetwork with caps
+        if (type === 'arrow') {
+          const startCapValue = normalizeLineCap(props.startCap as string | undefined) ?? 'NONE'
+          const endCapValue = normalizeLineCap(props.endCap as string | undefined) ?? 'ARROW_LINES'
 
-          if (useVector) {
-            lineCapNodes.push({
-              path: [...path],
-              startCap: startCapValue,
-              endCap: endCapValue,
-              stroke: processed.stroke as string | undefined,
-              strokeWidth: processed.strokeWidth as number | undefined
-            })
-          }
+          lineCapNodes.push({
+            path: [...path],
+            startCap: startCapValue,
+            endCap: endCapValue,
+            stroke: processed.stroke as string | undefined,
+            strokeWidth: processed.strokeWidth as number | undefined
+          })
 
-          // Don't pass startCap/endCap to Widget Line
+          // Create normal Line as placeholder (will be replaced)
           const cleanProps = { ...processed }
           delete cleanProps.startCap
           delete cleanProps.endCap
           delete cleanProps.__startCap
           delete cleanProps.__endCap
-          // Create normal Line as placeholder
           return h(Line, cleanProps)
         }
 

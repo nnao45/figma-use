@@ -1,5 +1,7 @@
 import { defineCommand } from 'citty'
 
+import arrow from './arrow.ts'
+import chart from './chart/index.ts'
 import component from './component.ts'
 import ellipse from './ellipse.ts'
 import frame from './frame.ts'
@@ -22,6 +24,7 @@ export default defineCommand({
     rect,
     ellipse,
     line,
+    arrow,
     polygon,
     star,
     vector,
@@ -33,6 +36,7 @@ export default defineCommand({
     section,
     page,
     slice,
-    icon
+    icon,
+    chart
   }
 })

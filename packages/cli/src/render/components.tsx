@@ -28,6 +28,10 @@ export function Line(props: BaseProps): TreeNode {
   return node('line', props)
 }
 
+export function Arrow(props: BaseProps): TreeNode {
+  return node('arrow', props)
+}
+
 export function Image(props: BaseProps & { src: string }): TreeNode {
   return node('image', props)
 }
@@ -70,6 +74,7 @@ export const INTRINSIC_ELEMENTS = [
   'rectangle',
   'ellipse',
   'line',
+  'arrow',
   'image',
   'svg',
   'star',

@@ -212,8 +212,8 @@ describe('render with line stroke caps', () => {
     await teardownTestPage()
   })
 
-  test('renders Line with endCap arrow', async () => {
-    const jsx = `<Line x={10} y={10} w={200} endCap="arrow" stroke="#000000" strokeWidth={2} />`
+  test('renders Arrow with default endCap', async () => {
+    const jsx = `<Arrow x={10} y={10} w={200} stroke="#000000" strokeWidth={2} />`
     const result = (await run(
       `render --stdin --parent "${testFrameId}" --json`,
       jsx
@@ -229,8 +229,8 @@ describe('render with line stroke caps', () => {
     expect(nodeInfo.strokeWeight).toBe(2)
   }, 30000)
 
-  test('renders root Line with endCap arrow as VECTOR', async () => {
-    const jsx = `<Line x={10} y={10} w={200} endCap="arrow" stroke="#000000" strokeWidth={2} />`
+  test('renders root Arrow as VECTOR', async () => {
+    const jsx = `<Arrow x={10} y={10} w={200} stroke="#000000" strokeWidth={2} />`
     const result = (await run(`render --stdin --json`, jsx)) as { id: string }
     trackNode(result.id)
 
@@ -242,8 +242,8 @@ describe('render with line stroke caps', () => {
     expect(nodeInfo.strokeWeight).toBe(2)
   }, 30000)
 
-  test('renders Line with startCap and endCap', async () => {
-    const jsx = `<Line x={10} y={40} w={200} startCap="circle" endCap="arrow-equilateral" stroke="#3B82F6" strokeWidth={3} />`
+  test('renders Arrow with startCap and endCap', async () => {
+    const jsx = `<Arrow x={10} y={40} w={200} startCap="circle" endCap="arrow-equilateral" stroke="#3B82F6" strokeWidth={3} />`
     const result = (await run(
       `render --stdin --parent "${testFrameId}" --json`,
       jsx
@@ -258,8 +258,8 @@ describe('render with line stroke caps', () => {
     expect(nodeInfo.strokeWeight).toBe(3)
   }, 30000)
 
-  test('renders Line with diamond caps', async () => {
-    const jsx = `<Line x={10} y={70} w={200} startCap="diamond" endCap="diamond" stroke="#EF4444" strokeWidth={2} />`
+  test('renders Arrow with diamond caps', async () => {
+    const jsx = `<Arrow x={10} y={70} w={200} startCap="diamond" endCap="diamond" stroke="#EF4444" strokeWidth={2} />`
     const result = (await run(
       `render --stdin --parent "${testFrameId}" --json`,
       jsx
@@ -272,8 +272,8 @@ describe('render with line stroke caps', () => {
     expect(nodeInfo.type).toBe('VECTOR')
   }, 30000)
 
-  test('renders Line with triangle cap', async () => {
-    const jsx = `<Line x={10} y={100} w={200} endCap="triangle" stroke="#10B981" strokeWidth={2} />`
+  test('renders Arrow with triangle cap', async () => {
+    const jsx = `<Arrow x={10} y={100} w={200} endCap="triangle" stroke="#10B981" strokeWidth={2} />`
     const result = (await run(
       `render --stdin --parent "${testFrameId}" --json`,
       jsx
