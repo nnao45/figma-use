@@ -169,6 +169,15 @@ In JSX:
 
 Browse 150k+ icons: [icon-sets.iconify.design](https://icon-sets.iconify.design/)
 
+### Charts
+
+Create charts with d3-based commands.
+
+```bash
+figma-use create chart scatter --data "10:20,30:40,50:60" --x-label "X" --y-label "Y"
+figma-use create chart bubble --data "10:20:30,40:50:20,60:30:50" --max-radius 50
+```
+
 ### Images
 
 Load images from URL:

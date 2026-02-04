@@ -79,7 +79,7 @@ export default () => (
 )
 ```
 
-**Elements:** `Frame`, `Rectangle`, `Ellipse`, `Text`, `Line`, `Star`, `Polygon`, `Vector`, `Group`, `Icon`, `Image`, `Instance`
+**Elements:** `Frame`, `Rectangle`, `Ellipse`, `Text`, `Line`, `Arrow`, `Star`, `Polygon`, `Vector`, `Group`, `Icon`, `Image`, `Instance`
 
 Use `<Instance>` to create component instances:
 
@@ -92,19 +92,31 @@ Use `<Instance>` to create component instances:
 
 ⚠️ **Always use `--x` and `--y`** to position renders. Don't stack everything at (0, 0).
 
-## Line Caps
+## Arrows
 
-Line caps are supported in both command and JSX render modes.
+Create arrows with customizable start/end caps. Use `create arrow` command (not `create line`).
 
 ```bash
-figma-use create line --length 120 --stroke "#111" --start-cap arrow --end-cap circle
+# Default arrow (end cap = arrow)
+figma-use create arrow --x 100 --y 100 --length 200 --stroke "#000"
+
+# Both ends with different caps
+figma-use create arrow --x 100 --y 150 --length 200 --start-cap circle --end-cap arrow --stroke "#3B82F6" --stroke-weight 3
+
+# Double arrow
+figma-use create arrow --x 100 --y 200 --length 200 --start-cap arrow --end-cap arrow --stroke "#EF4444"
 ```
+
+In JSX:
 
 ```tsx
-<Line x={0} y={0} w={120} stroke="#111" strokeWidth={2} startCap="arrow" endCap="circle" />
+<Arrow x={100} y={100} w={200} stroke="#000" strokeWidth={2} />
+<Arrow x={100} y={150} w={200} startCap="circle" endCap="triangle" stroke="#3B82F6" strokeWidth={3} />
 ```
 
-Allowed values: `none`, `round`, `square`, `arrow`, `arrow-lines`, `arrow-equilateral`, `triangle`, `diamond`, `circle`.
+**Cap values:** `none`, `round`, `square`, `arrow`, `arrow-lines`, `arrow-equilateral`, `triangle`, `diamond`, `circle`
+
+Note: `create line` creates a pure Line node without arrow caps.
 
 ## Icons
 
@@ -139,6 +151,20 @@ In JSX:
 ```tsx
 <Image src="https://example.com/photo.jpg" w={200} h={150} />
 ```
+
+## Charts
+
+Create charts with d3-based commands:
+
+```bash
+figma-use create chart scatter --data "10:20,30:40,50:60" --x-label "X" --y-label "Y"
+figma-use create chart bubble --data "10:20:30,40:50:20,60:30:50" --max-radius 50
+```
+
+Data formats:
+
+- Scatter: `x:y,...` (optional `label:x:y`)
+- Bubble: `x:y:size,...` (optional `label:x:y:size`)
 
 ## Export JSX
 

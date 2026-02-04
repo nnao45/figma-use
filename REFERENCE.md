@@ -64,6 +64,23 @@ Color options (`--fill`, `--stroke`, `--color`) accept hex (`#RGB`, `#RRGGBB`, `
 
 Line caps: `--start-cap` / `--end-cap` support `none`, `round`, `square`, `arrow`, `arrow-lines`, `arrow-equilateral`, `triangle`, `diamond`, `circle`.
 
+## Create Charts
+
+```bash
+figma-use create chart pie --data "A:40,B:60"
+figma-use create chart donut --data "A:40,B:60" --inner-radius 50
+figma-use create chart bar --data "Jan:10,Feb:30,Mar:20"
+figma-use create chart line --data "Jan:10,Feb:30,Mar:20" --show-points
+figma-use create chart area --data "Jan:10,Feb:30,Mar:20" --opacity 0.4
+figma-use create chart radar --data "Speed:70,Power:60,Control:80"
+figma-use create chart scatter --data "10:20,30:40,50:60" --x-label "X" --y-label "Y"
+figma-use create chart bubble --data "10:20:30,40:50:20,60:30:50" --max-radius 50
+```
+
+Scatter data format: `x:y,...` (optional `label:x:y`).
+
+Bubble data format: `x:y:size,...` (optional `label:x:y:size`).
+
 ## Set (Modify)
 
 ```bash
