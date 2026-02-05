@@ -294,6 +294,9 @@ In JSX:
 | Short | Full | Values |
 |-------|------|--------|
 | `bg` | fill | hex or `$Variable` |
+| `gradient` | gradientFill | `{type, stops, angle}` |
+| `pattern` | patternFill | `{url, mode, scale}` |
+| `noise` | noiseEffect | `{opacity, size, blend}` |
 | `stroke` | strokeColor | hex |
 | `strokeWidth` | strokeWeight | number |
 | `strokeAlign` | strokeAlign | `"inside"`, `"outside"` |
@@ -489,6 +492,10 @@ figma-use variable find "Text/Neutral"     # Search variables by name
 
 # Modify
 figma-use set fill <id> "#FF0000"
+figma-use set gradient <id> linear "#FF0000:0,#0000FF:1"           # Gradient fill
+figma-use set gradient <id> radial "#FFF:0,#000:1" --angle 45     # Radial with angle
+figma-use set pattern-fill <id> "https://..." --mode tile --scale 0.5  # Pattern fill
+figma-use set noise <id> --opacity 0.1 --size medium              # Noise texture
 figma-use set radius <id> 12
 figma-use set text <id> "New text"
 figma-use set text-resize <id> height   # Wrap text (height auto, fixed width)
