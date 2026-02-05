@@ -6,11 +6,14 @@ import effect from './effect.ts'
 import fill from './fill.ts'
 import fontRange from './font-range.ts'
 import font from './font.ts'
+import gradient from './gradient.ts'
 import image from './image.ts'
 import layout from './layout.ts'
 import locked from './locked.ts'
 import minmax from './minmax.ts'
+import noise from './noise.ts'
 import opacity from './opacity.ts'
+import patternFill from './pattern-fill.ts'
 import props from './props.ts'
 import radius from './radius.ts'
 import rotation from './rotation.ts'
@@ -24,6 +27,9 @@ export default defineCommand({
   meta: { description: 'Set node properties' },
   subCommands: {
     fill,
+    gradient,
+    'pattern-fill': patternFill,
+    noise,
     stroke,
     'stroke-align': strokeAlign,
     radius,

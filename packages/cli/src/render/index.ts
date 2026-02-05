@@ -45,3 +45,14 @@ export {
 } from './component-set.tsx'
 
 export { buildComponent, readStdin, renderFromString } from './render-from-string.ts'
+
+export type {
+  GradientValue,
+  GradientStop,
+  PatternValue,
+  NoiseValue,
+  StyleProps,
+  BaseProps,
+  TextProps,
+  TreeNode
+} from './tree.ts'

@@ -2,6 +2,33 @@
  * Figma Tree Node
  */
 
+// Gradient types
+export interface GradientStop {
+  color: string
+  position: number
+}
+
+export interface GradientValue {
+  type: 'linear' | 'radial' | 'angular' | 'diamond'
+  stops: GradientStop[]
+  angle?: number
+}
+
+// Pattern types
+export interface PatternValue {
+  url: string
+  mode?: 'tile' | 'fill' | 'fit' | 'crop'
+  scale?: number
+  rotation?: number
+}
+
+// Noise types
+export interface NoiseValue {
+  opacity?: number
+  size?: 'fine' | 'medium' | 'coarse'
+  blend?: string
+}
+
 export type Props = Record<string, unknown>
 
 export interface TreeNode {
@@ -91,7 +118,7 @@ export interface StyleProps {
 
   // Appearance
   bg?: string
-  fill?: string
+  fill?: string | GradientValue
   stroke?: string
   strokeWidth?: number
   strokeAlign?: 'inside' | 'outside' | 'center'
@@ -112,6 +139,11 @@ export interface StyleProps {
   overflow?: 'hidden' | 'visible'
   shadow?: string
   blur?: number
+
+  // Advanced fills
+  gradient?: GradientValue
+  pattern?: PatternValue
+  noise?: NoiseValue
 
   // Text
   size?: number
