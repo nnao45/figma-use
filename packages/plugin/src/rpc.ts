@@ -2466,7 +2466,10 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
         blur: '__blur',
         blendMode: '__blendMode',
         startCap: '__startCap',
-        endCap: '__endCap'
+        endCap: '__endCap',
+        gradient: '__gradient',
+        pattern: '__pattern',
+        noise: '__noise'
       }
 
       const DIRECTION_MAP: Record<string, string> = {
@@ -2511,6 +2514,22 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
         blendMode?: string
         startCap?: string
         endCap?: string
+        gradient?: {
+          type: 'linear' | 'radial' | 'angular' | 'diamond'
+          stops: Array<{ color: string; position: number }>
+          angle?: number
+        }
+        pattern?: {
+          url: string
+          mode?: 'tile' | 'fill' | 'fit' | 'crop'
+          scale?: number
+          rotation?: number
+        }
+        noise?: {
+          opacity?: number
+          size?: 'fine' | 'medium' | 'coarse'
+          blend?: string
+        }
       }> = []
 
       // Nodes that need vector replacement for stroke caps
@@ -2598,6 +2617,14 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       const svgNodes: Array<{ path: number[]; svgString: string }> = []
       // Nodes that need instance creation after tree creation
       const instanceNodes: Array<{ path: number[]; componentId: string; name?: string }> = []
+      // Nodes that need pattern fill (async image loading)
+      const patternNodes: Array<{
+        target: GeometryMixin
+        url: string
+        scaleMode: 'TILE' | 'FILL' | 'FIT' | 'CROP'
+        scale: number
+        rotation: number
+      }> = []
 
       function buildTree(node: unknown, path: number[] = []): unknown {
         if (typeof node === 'string' || typeof node === 'number') return node
@@ -2690,7 +2717,10 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
           '__blur',
           '__blendMode',
           '__startCap',
-          '__endCap'
+          '__endCap',
+          '__gradient',
+          '__pattern',
+          '__noise'
         ]
         for (const key of postKeys) {
           if (processed[key] !== undefined) {
@@ -2850,6 +2880,91 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
           if (effects.length > 0) {
             ;(target as FrameNode).effects = effects
           }
+        }
+        // Gradient fill
+        if ('fills' in target && pp.gradient) {
+          const { type, stops, angle = 0 } = pp.gradient
+          const gradientType = {
+            linear: 'GRADIENT_LINEAR',
+            radial: 'GRADIENT_RADIAL',
+            angular: 'GRADIENT_ANGULAR',
+            diamond: 'GRADIENT_DIAMOND'
+          }[type] as 'GRADIENT_LINEAR' | 'GRADIENT_RADIAL' | 'GRADIENT_ANGULAR' | 'GRADIENT_DIAMOND'
+
+          const gradientStops: ColorStop[] = stops.map((s) => ({
+            color: hexToRgbaColor(s.color),
+            position: s.position
+          }))
+
+          const gradientTransform = createGradientTransformJsx(gradientType, angle)
+          ;(target as GeometryMixin).fills = [
+            {
+              type: gradientType,
+              gradientStops,
+              gradientTransform
+            } as GradientPaint
+          ]
+        }
+        // Pattern fill
+        if ('fills' in target && pp.pattern) {
+          const { url, mode = 'tile', scale = 1, rotation = 0 } = pp.pattern
+          const scaleMode = mode.toUpperCase() as 'TILE' | 'FILL' | 'FIT' | 'CROP'
+
+          // For pattern, we need to create image asynchronously
+          // Store for async processing
+          patternNodes.push({
+            target: target as GeometryMixin,
+            url,
+            scaleMode,
+            scale,
+            rotation
+          })
+        }
+        // Noise effect
+        if ('effects' in target && pp.noise) {
+          const { opacity = 0.1, size = 'medium', blend = 'OVERLAY' } = pp.noise
+          const sizeMap = { fine: 0.5, medium: 1.5, coarse: 3 }
+          const noiseRadius = sizeMap[size] || 1.5
+
+          const existingEffects = (target as FrameNode).effects || []
+          ;(target as FrameNode).effects = [
+            ...existingEffects,
+            {
+              type: 'LAYER_BLUR',
+              radius: noiseRadius,
+              visible: true
+            } as Effect
+          ]
+          if ('blendMode' in target) {
+            ;(target as BlendMixin).blendMode = blend.toUpperCase().replace(/-/g, '_') as BlendMode
+          }
+          if ('opacity' in target) {
+            ;(target as BlendMixin).opacity = Math.min(
+              1,
+              ((target as BlendMixin).opacity || 1) * (1 - opacity * 0.5)
+            )
+          }
+        }
+      }
+
+      // Process pattern fills asynchronously
+      for (const { target, url, scaleMode, scale, rotation } of patternNodes) {
+        try {
+          const image = await figma.createImageAsync(url)
+          const paint: ImagePaint = {
+            type: 'IMAGE',
+            imageHash: image.hash,
+            scaleMode
+          }
+          if (scaleMode === 'TILE') {
+            paint.scalingFactor = scale
+            if (rotation !== 0) {
+              paint.rotation = rotation
+            }
+          }
+          target.fills = [paint]
+        } catch (e) {
+          console.error('Failed to load pattern image:', e)
         }
       }
 
@@ -5419,6 +5534,61 @@ function parseVariableValue(value: string, type: string): VariableValue {
 // Convert svgpath segments to string with spaces (Figma requires spaces between commands)
 function svgPathToString(sp: ReturnType<typeof svgpath>): string {
   return sp.segments.map((seg: (string | number)[]) => seg.join(' ')).join(' ')
+}
+
+/**
+ * Convert hex color to RGBA for gradient stops (JSX rendering)
+ */
+function hexToRgbaColor(hex: string): RGBA {
+  const clean = expandHex(hex)
+  const hasAlpha = clean.length === 8
+  return {
+    r: parseInt(clean.slice(0, 2), 16) / 255,
+    g: parseInt(clean.slice(2, 4), 16) / 255,
+    b: parseInt(clean.slice(4, 6), 16) / 255,
+    a: hasAlpha ? parseInt(clean.slice(6, 8), 16) / 255 : 1
+  }
+}
+
+/**
+ * Create gradient transform matrix for JSX rendering
+ */
+function createGradientTransformJsx(
+  type: 'GRADIENT_LINEAR' | 'GRADIENT_RADIAL' | 'GRADIENT_ANGULAR' | 'GRADIENT_DIAMOND',
+  angleDegrees: number
+): Transform {
+  const angleRad = (angleDegrees * Math.PI) / 180
+  const cos = Math.cos(angleRad)
+  const sin = Math.sin(angleRad)
+
+  if (type === 'GRADIENT_LINEAR' || type === 'GRADIENT_ANGULAR') {
+    const tx = 0.5 - 0.5 * cos + 0.5 * sin
+    const ty = 0.5 - 0.5 * sin - 0.5 * cos
+    return [
+      [cos, -sin, tx],
+      [sin, cos, ty]
+    ]
+  }
+
+  if (type === 'GRADIENT_RADIAL' || type === 'GRADIENT_DIAMOND') {
+    if (angleDegrees === 0) {
+      return [
+        [1, 0, 0],
+        [0, 1, 0]
+      ]
+    }
+    const tx = 0.5 - 0.5 * cos + 0.5 * sin
+    const ty = 0.5 - 0.5 * sin - 0.5 * cos
+    return [
+      [cos, -sin, tx],
+      [sin, cos, ty]
+    ]
+  }
+
+  return [
+    [1, 0, 0],
+    [0, 1, 0]
+  ]
 }
 
 // Expose RPC for CDP injection

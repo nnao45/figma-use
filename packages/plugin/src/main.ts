@@ -1074,6 +1074,101 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       return serializeNode(node as BaseNode)
     }
 
+    case 'set-gradient': {
+      const { id, type, stops, angle = 0 } = args as {
+        id: string
+        type: 'GRADIENT_LINEAR' | 'GRADIENT_RADIAL' | 'GRADIENT_ANGULAR' | 'GRADIENT_DIAMOND'
+        stops: Array<{ color: string; position: number }>
+        angle?: number
+      }
+      const node = (await figma.getNodeByIdAsync(id)) as GeometryMixin | null
+      if (!node || !('fills' in node)) throw new Error('Node not found')
+
+      const gradientStops: ColorStop[] = stops.map((s) => ({
+        color: hexToRgba(s.color),
+        position: s.position
+      }))
+
+      const gradientTransform = createGradientTransform(type, angle)
+
+      node.fills = [
+        {
+          type,
+          gradientStops,
+          gradientTransform
+        } as GradientPaint
+      ]
+      return serializeNode(node as BaseNode)
+    }
+
+    case 'set-pattern-fill': {
+      const { id, url, scaleMode, scale = 1, rotation = 0 } = args as {
+        id: string
+        url: string
+        scaleMode: 'TILE' | 'FILL' | 'FIT' | 'CROP'
+        scale?: number
+        rotation?: number
+      }
+      const node = (await figma.getNodeByIdAsync(id)) as GeometryMixin | null
+      if (!node || !('fills' in node)) throw new Error('Node not found')
+      const image = await figma.createImageAsync(url)
+
+      const paint: ImagePaint = {
+        type: 'IMAGE',
+        imageHash: image.hash,
+        scaleMode
+      }
+
+      if (scaleMode === 'TILE') {
+        paint.scalingFactor = scale
+        if (rotation !== 0) {
+          paint.rotation = rotation
+        }
+      }
+
+      node.fills = [paint]
+      return serializeNode(node as BaseNode)
+    }
+
+    case 'set-noise': {
+      const { id, opacity = 0.1, size = 'medium', blendMode = 'OVERLAY' } = args as {
+        id: string
+        opacity?: number
+        size?: 'fine' | 'medium' | 'coarse'
+        blendMode?: BlendMode
+      }
+      const node = (await figma.getNodeByIdAsync(id)) as SceneNode | null
+      if (!node) throw new Error('Node not found')
+      if (!('effects' in node)) throw new Error('Node does not support effects')
+
+      // Map size to blur radius for noise effect simulation
+      const sizeMap = { fine: 0.5, medium: 1.5, coarse: 3 }
+      const noiseRadius = sizeMap[size] || 1.5
+
+      // Create a layer blur effect to simulate noise texture
+      const noiseEffect: Effect = {
+        type: 'LAYER_BLUR',
+        radius: noiseRadius,
+        visible: true
+      }
+
+      // Get existing effects and add noise effect
+      const existingEffects = ('effects' in node ? node.effects : []) as Effect[]
+      ;(node as any).effects = [...existingEffects, noiseEffect]
+
+      // Set blend mode if supported
+      if ('blendMode' in node) {
+        ;(node as any).blendMode = blendMode
+      }
+
+      // Set opacity
+      if ('opacity' in node) {
+        ;(node as any).opacity = Math.min(1, (node as any).opacity || 1)
+      }
+
+      return serializeNode(node)
+    }
+
     // ==================== UPDATE PROPERTIES ====================
     case 'rename-node': {
       const { id, name } = args as { id: string; name: string }
@@ -2659,6 +2754,55 @@ function serializePaint(paint: Paint): object {
     }
   }
   return { type: paint.type }
+}
+
+/**
+ * Create gradient transform matrix based on type and angle
+ * Figma uses a 2x3 matrix: [[a, b, tx], [c, d, ty]]
+ * where the gradient goes from (0, 0.5) to (1, 0.5) in the transformed space
+ */
+function createGradientTransform(
+  type: 'GRADIENT_LINEAR' | 'GRADIENT_RADIAL' | 'GRADIENT_ANGULAR' | 'GRADIENT_DIAMOND',
+  angleDegrees: number
+): Transform {
+  const angleRad = (angleDegrees * Math.PI) / 180
+  const cos = Math.cos(angleRad)
+  const sin = Math.sin(angleRad)
+
+  if (type === 'GRADIENT_LINEAR' || type === 'GRADIENT_ANGULAR') {
+    // For linear/angular gradients, apply rotation around center (0.5, 0.5)
+    // Transform: translate to center, rotate, translate back
+    const tx = 0.5 - 0.5 * cos + 0.5 * sin
+    const ty = 0.5 - 0.5 * sin - 0.5 * cos
+    return [
+      [cos, -sin, tx],
+      [sin, cos, ty]
+    ]
+  }
+
+  if (type === 'GRADIENT_RADIAL' || type === 'GRADIENT_DIAMOND') {
+    // For radial/diamond gradients, center at (0.5, 0.5)
+    // Angle affects the shape stretch direction
+    if (angleDegrees === 0) {
+      return [
+        [1, 0, 0],
+        [0, 1, 0]
+      ]
+    }
+    // Apply rotation for non-zero angles
+    const tx = 0.5 - 0.5 * cos + 0.5 * sin
+    const ty = 0.5 - 0.5 * sin - 0.5 * cos
+    return [
+      [cos, -sin, tx],
+      [sin, cos, ty]
+    ]
+  }
+
+  // Default: no transformation
+  return [
+    [1, 0, 0],
+    [0, 1, 0]
+  ]
 }
 
 function rgbToHex(color: RGB): string {
