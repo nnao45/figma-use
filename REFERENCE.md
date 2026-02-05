@@ -86,6 +86,22 @@ Bubble data format: `x:y:size,...` (optional `label:x:y:size`).
 ```bash
 figma-use set fill <id> "#FF0000"
 figma-use set fill <id> "var:Colors/Primary"
+
+# Gradient fills (linear, radial, angular, diamond)
+figma-use set gradient <id> linear "#FF0000:0,#0000FF:1"
+figma-use set gradient <id> radial "#FFFFFF:0,#000000:0.5,#FFFFFF:1"
+figma-use set gradient <id> angular "#FF0000:0,#FFFF00:0.33,#00FF00:0.66,#FF0000:1" --angle 45
+figma-use set gradient <id> diamond "#FFFFFF:0,#000000:1"
+
+# Pattern/image fills with tiling
+figma-use set pattern-fill <id> "https://example.com/pattern.png"
+figma-use set pattern-fill <id> "https://example.com/texture.png" --mode tile --scale 0.5 --rotation 45
+figma-use set pattern-fill <id> "data:image/png;base64,..." --mode fill
+
+# Noise texture effect
+figma-use set noise <id>
+figma-use set noise <id> --opacity 0.2 --size fine --blend multiply
+
 figma-use set stroke <id> "#000" --weight 2
 figma-use set stroke-align <id> INSIDE|CENTER|OUTSIDE
 figma-use set radius <id> 12

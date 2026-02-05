@@ -29,6 +29,22 @@ export default defineCommand({
       const scale = args.scale ? parseFloat(args.scale) : 1
       const rotation = args.rotation ? parseFloat(args.rotation) : 0
 
+      // Validate URL format
+      const url = args.url as string
+      if (!isValidUrl(url)) {
+        throw new Error(`Invalid URL: "${url}". Must be a valid http/https URL or data URI`)
+      }
+
+      // Validate scale
+      if (isNaN(scale) || scale <= 0) {
+        throw new Error('Scale must be a positive number')
+      }
+
+      // Validate rotation
+      if (isNaN(rotation)) {
+        throw new Error('Rotation must be a valid number')
+      }
+
       const result = await sendCommand('set-pattern-fill', {
         id: args.id,
         url: args.url,
@@ -42,6 +58,11 @@ export default defineCommand({
     }
   }
 })
+
+function isValidUrl(url: string): boolean {
+  // Accept http/https URLs and data URIs
+  return /^(https?:\/\/|data:)/.test(url)
+}
 
 function parseScaleMode(mode?: string): 'TILE' | 'FILL' | 'FIT' | 'CROP' {
   if (!mode) return 'TILE'

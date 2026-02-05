@@ -30,6 +30,11 @@ export default defineCommand({
       const stops = parseGradientStops(args.stops as string)
       const angle = args.angle ? parseFloat(args.angle) : 0
 
+      // Validate angle
+      if (isNaN(angle)) {
+        throw new Error('Angle must be a valid number')
+      }
+
       const result = await sendCommand('set-gradient', {
         id: args.id,
         type: gradientType,
@@ -76,8 +81,8 @@ function parseGradientStops(stopsStr: string): Array<{ color: string; position: 
     if (isNaN(position) || position < 0 || position > 1) {
       throw new Error(`Invalid position in stop "${stop}". Position must be between 0 and 1`)
     }
-    if (!color.startsWith('#')) {
-      throw new Error(`Invalid color in stop "${stop}". Color must be hex format (e.g., #FF0000)`)
+    if (!isValidHexColor(color)) {
+      throw new Error(`Invalid color "${color}" in stop "${stop}". Must be hex format (#RGB, #RRGGBB, or #RRGGBBAA)`)
     }
     return { color, position }
   })
@@ -87,4 +92,9 @@ function parseGradientStops(stopsStr: string): Array<{ color: string; position: 
   }
 
   return stops
+}
+
+function isValidHexColor(color: string): boolean {
+  // Validate hex color format: #RGB, #RRGGBB, or #RRGGBBAA
+  return /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/.test(color)
 }
