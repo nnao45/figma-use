@@ -47,13 +47,13 @@ JSX is how LLMs already think about UI. They've seen millions of React component
 ## Installation
 
 ```bash
-npm install -g figma-use
+npm install -g @nnao45/figma-use
 ```
 
 Or run directly without installing:
 
 ```bash
-npx figma-use status
+npx @nnao45/figma-use status
 ```
 
 Start Figma with remote debugging enabled:
