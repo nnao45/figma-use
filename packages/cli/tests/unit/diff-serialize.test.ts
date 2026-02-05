@@ -152,7 +152,9 @@ describe('deserializeNode', () => {
   })
 
   test('deserializes fill and stroke', () => {
-    const result = deserializeNode('type: RECTANGLE\nfill: #FF0000\nstroke: #000000\nstrokeWeight: 2')
+    const result = deserializeNode(
+      'type: RECTANGLE\nfill: #FF0000\nstroke: #000000\nstrokeWeight: 2'
+    )
     expect(result.fill).toBe('#FF0000')
     expect(result.stroke).toBe('#000000')
     expect(result.strokeWeight).toBe(2)

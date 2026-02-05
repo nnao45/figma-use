@@ -13,10 +13,8 @@ export default defineCommand({
     try {
       const ids = args.ids.split(/[\s,]+/).filter(Boolean)
 
-      const result = await sendCommand<Array<{ id: string; name: string }>>(
-        'eval',
-        {
-          code: `
+      const result = await sendCommand<Array<{ id: string; name: string }>>('eval', {
+        code: `
           const ids = ${JSON.stringify(ids)}
           const result = []
           for (const id of ids) {
@@ -28,8 +26,7 @@ export default defineCommand({
           }
           return result
         `
-        }
-      )
+      })
 
       if (args.json) {
         console.log(JSON.stringify(result, null, 2))

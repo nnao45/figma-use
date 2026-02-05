@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty'
 
 import { sendCommand, printResult, handleError } from '../../../client.ts'
-import { getD3, getJSDOM, parseData, parseColors, type DataPoint } from './d3-utils.ts'
+import { getD3, createSvgDocument, parseData, parseColors, type DataPoint } from './d3-utils.ts'
 import { createLegendSvg, calculateLegendWidth, calculateLegendHeight } from './legend.ts'
 
 export default defineCommand({
@@ -22,7 +22,7 @@ export default defineCommand({
   async run({ args }) {
     try {
       const d3 = await getD3()
-      const JSDOM = await getJSDOM()
+      const { document } = await createSvgDocument()
 
       const data = parseData(args.data)
       const colors = parseColors(args.color)
@@ -30,11 +30,9 @@ export default defineCommand({
       const size = Number(args.size)
       const fillOpacity = Number(args.opacity)
       const levels = Number(args.levels)
-      const maxValue = args['max-value'] ? Number(args['max-value']) : Math.max(...data.map(d => d.value))
-
-      // Create DOM for d3
-      const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>')
-      const document = dom.window.document
+      const maxValue = args['max-value']
+        ? Number(args['max-value'])
+        : Math.max(...data.map((d) => d.value))
 
       // Calculate dimensions with legend
       const legendWidth = args.legend ? calculateLegendWidth(data) : 0
@@ -42,7 +40,8 @@ export default defineCommand({
       const totalWidth = size + (args.legend ? legendWidth + 20 : 0)
       const totalHeight = Math.max(size, args.legend ? legendHeight + 20 : size)
 
-      const svg = d3.select(document.body)
+      const svg = d3
+        .select(document.body)
         .append('svg')
         .attr('width', totalWidth)
         .attr('height', totalHeight)
@@ -52,8 +51,7 @@ export default defineCommand({
       const centerY = size / 2
       const radius = size / 2 - 40 // Leave space for labels
 
-      const g = svg.append('g')
-        .attr('transform', `translate(${centerX}, ${centerY})`)
+      const g = svg.append('g').attr('transform', `translate(${centerX}, ${centerY})`)
 
       const angleSlice = (Math.PI * 2) / data.length
 
@@ -62,14 +60,11 @@ export default defineCommand({
         const levelRadius = (radius / levels) * level
         const levelPoints = data.map((_, i) => {
           const angle = angleSlice * i - Math.PI / 2
-          return [
-            levelRadius * Math.cos(angle),
-            levelRadius * Math.sin(angle)
-          ]
+          return [levelRadius * Math.cos(angle), levelRadius * Math.sin(angle)]
         })
 
         g.append('polygon')
-          .attr('points', levelPoints.map(p => p.join(',')).join(' '))
+          .attr('points', levelPoints.map((p) => p.join(',')).join(' '))
           .attr('fill', 'none')
           .attr('stroke', '#E5E7EB')
           .attr('stroke-width', 1)
@@ -109,15 +104,12 @@ export default defineCommand({
       const dataPoints = data.map((d, i) => {
         const angle = angleSlice * i - Math.PI / 2
         const r = (d.value / maxValue) * radius
-        return [
-          r * Math.cos(angle),
-          r * Math.sin(angle)
-        ]
+        return [r * Math.cos(angle), r * Math.sin(angle)]
       })
 
       // Draw data polygon
       g.append('polygon')
-        .attr('points', dataPoints.map(p => p.join(',')).join(' '))
+        .attr('points', dataPoints.map((p) => p.join(',')).join(' '))
         .attr('fill', fillColor)
         .attr('fill-opacity', fillOpacity)
         .attr('stroke', fillColor)
@@ -143,12 +135,12 @@ export default defineCommand({
       const svgString = document.body.innerHTML
 
       // Import to Figma
-      const result = await sendCommand('import-svg', {
+      const result = (await sendCommand('import-svg', {
         svg: svgString,
         x: Number(args.x),
         y: Number(args.y),
         parentId: args.parent
-      }) as { id: string }
+      })) as { id: string }
 
       // Rename node
       await sendCommand('rename-node', { id: result.id, name: 'Radar Chart' })

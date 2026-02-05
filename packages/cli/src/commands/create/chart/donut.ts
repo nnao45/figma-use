@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty'
 
 import { sendCommand, printResult, handleError } from '../../../client.ts'
-import { getD3, getJSDOM, parseData, parseColors, type DataPoint } from './d3-utils.ts'
+import { getD3, createSvgDocument, parseData, parseColors, type DataPoint } from './d3-utils.ts'
 import { createLegendSvg, calculateLegendWidth, calculateLegendHeight } from './legend.ts'
 
 export default defineCommand({
@@ -20,16 +20,12 @@ export default defineCommand({
   async run({ args }) {
     try {
       const d3 = await getD3()
-      const JSDOM = await getJSDOM()
+      const { document } = await createSvgDocument()
 
       const data = parseData(args.data)
       const colors = parseColors(args.colors)
       const size = Number(args.size)
       const innerRadiusRatio = Number(args['inner-radius'])
-
-      // Create DOM for d3
-      const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>')
-      const document = dom.window.document
 
       // Calculate dimensions with legend
       const legendWidth = args.legend ? calculateLegendWidth(data) : 0
@@ -37,20 +33,24 @@ export default defineCommand({
       const totalWidth = size + (args.legend ? legendWidth + 20 : 0)
       const totalHeight = Math.max(size, args.legend ? legendHeight + 20 : size)
 
-      const svg = d3.select(document.body)
+      const svg = d3
+        .select(document.body)
         .append('svg')
         .attr('width', totalWidth)
         .attr('height', totalHeight)
         .attr('viewBox', `0 0 ${totalWidth} ${totalHeight}`)
 
-      const g = svg.append('g')
-        .attr('transform', `translate(${size / 2}, ${size / 2})`)
+      const g = svg.append('g').attr('transform', `translate(${size / 2}, ${size / 2})`)
 
       const outerRadius = size / 2 - 10
       const innerRadius = outerRadius * innerRadiusRatio
 
-      const pie = d3.pie<DataPoint>().value((d: DataPoint) => d.value).sort(null)
-      const arc = d3.arc<d3.PieArcDatum<DataPoint>>()
+      const pie = d3
+        .pie<DataPoint>()
+        .value((d: DataPoint) => d.value)
+        .sort(null)
+      const arc = d3
+        .arc<d3.PieArcDatum<DataPoint>>()
         .innerRadius(innerRadius)
         .outerRadius(outerRadius)
 
@@ -71,12 +71,12 @@ export default defineCommand({
       const svgString = document.body.innerHTML
 
       // Import to Figma
-      const result = await sendCommand('import-svg', {
+      const result = (await sendCommand('import-svg', {
         svg: svgString,
         x: Number(args.x),
         y: Number(args.y),
         parentId: args.parent
-      }) as { id: string }
+      })) as { id: string }
 
       // Rename node
       await sendCommand('rename-node', { id: result.id, name: 'Donut Chart' })

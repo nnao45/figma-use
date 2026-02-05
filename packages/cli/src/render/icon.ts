@@ -1,3 +1,9 @@
+import { icons as heroiconsIcons } from '@iconify-json/heroicons'
+// Bundled icon sets (loaded on first use)
+import { icons as lucideIcons } from '@iconify-json/lucide'
+import { icons as mdiIcons } from '@iconify-json/mdi'
+import { icons as phIcons } from '@iconify-json/ph'
+import { icons as tablerIcons } from '@iconify-json/tabler'
 import { loadIcon } from '@iconify/core/lib/api/icons'
 import { setAPIModule } from '@iconify/core/lib/api/modules'
 import { fetchAPIModule } from '@iconify/core/lib/api/modules/fetch'
@@ -7,20 +13,13 @@ import type { ReactNode } from './mini-react.ts'
 import type { Props, ReactElement } from './tree.ts'
 import type { IconifyIcon, IconifyJSON } from '@iconify/types'
 
-// Bundled icon sets (loaded on first use)
-import { icons as lucideIcons } from '@iconify-json/lucide'
-import { icons as mdiIcons } from '@iconify-json/mdi'
-import { icons as tablerIcons } from '@iconify-json/tabler'
-import { icons as heroiconsIcons } from '@iconify-json/heroicons'
-import { icons as phIcons } from '@iconify-json/ph'
-
 // Map of bundled icon sets
 const bundledIconSets: Record<string, IconifyJSON> = {
   lucide: lucideIcons,
   mdi: mdiIcons,
   tabler: tablerIcons,
   heroicons: heroiconsIcons,
-  ph: phIcons,
+  ph: phIcons
 }
 
 // Initialize API module (for fallback to remote API)
@@ -56,7 +55,7 @@ function getBundledIcon(name: string): IconifyIcon | null {
   return {
     ...iconData,
     width: iconData.width ?? iconSet.width ?? 24,
-    height: iconData.height ?? iconSet.height ?? 24,
+    height: iconData.height ?? iconSet.height ?? 24
   }
 }
 

@@ -37,7 +37,10 @@ export default defineCommand({
   },
   async run({ args }) {
     try {
-      const names = args.names.split(',').map((n: string) => n.trim()).filter(Boolean)
+      const names = args.names
+        .split(',')
+        .map((n: string) => n.trim())
+        .filter(Boolean)
 
       if (names.length === 0) {
         console.error(fail('No icon names provided'))
@@ -144,7 +147,11 @@ export default defineCommand({
           console.log(ok(`  [${i + 1}/${names.length}] ${name}`) + dim(` → ${finalId}`))
         } catch (err) {
           errors.push(name)
-          console.log(dim(`  [${i + 1}/${names.length}] ${name} — ${err instanceof Error ? err.message : 'failed'}`))
+          console.log(
+            dim(
+              `  [${i + 1}/${names.length}] ${name} — ${err instanceof Error ? err.message : 'failed'}`
+            )
+          )
         }
       }
 

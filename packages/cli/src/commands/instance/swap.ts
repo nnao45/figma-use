@@ -33,7 +33,9 @@ export default defineCommand({
       if (args.json) {
         console.log(JSON.stringify(result, null, 2))
       } else {
-        console.log(ok(`Swapped "${result.name}" to component "${result.componentName}" (${result.id})`))
+        console.log(
+          ok(`Swapped "${result.name}" to component "${result.componentName}" (${result.id})`)
+        )
       }
     } catch (error) {
       handleError(error)

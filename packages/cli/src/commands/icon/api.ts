@@ -40,7 +40,9 @@ export async function iconifyFetch<T>(path: string, description: string): Promis
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     if (msg.includes('ENOTFOUND') || msg.includes('getaddrinfo')) {
-      throw new Error(`Cannot reach Iconify API (DNS resolution failed). Check your internet connection.`)
+      throw new Error(
+        `Cannot reach Iconify API (DNS resolution failed). Check your internet connection.`
+      )
     }
     if (msg.includes('ECONNREFUSED')) {
       throw new Error(`Iconify API connection refused. The service may be temporarily unavailable.`)
@@ -62,7 +64,9 @@ export async function iconifyFetch<T>(path: string, description: string): Promis
       throw new Error(`Iconify API rate limit exceeded. Wait a moment and try again.`)
     }
     if (res.status >= 500) {
-      throw new Error(`Iconify API server error (${res.status}). The service may be temporarily unavailable.`)
+      throw new Error(
+        `Iconify API server error (${res.status}). The service may be temporarily unavailable.`
+      )
     }
     throw new Error(`Iconify API error: HTTP ${res.status} for ${description}`)
   }

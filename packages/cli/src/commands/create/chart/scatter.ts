@@ -1,7 +1,13 @@
 import { defineCommand } from 'citty'
 
 import { sendCommand, printResult, handleError } from '../../../client.ts'
-import { getD3, getJSDOM, parseScatterData, parseColors, type ScatterPoint } from './d3-utils.ts'
+import {
+  getD3,
+  createSvgDocument,
+  parseScatterData,
+  parseColors,
+  type ScatterPoint
+} from './d3-utils.ts'
 import { createLegendSvg, calculateLegendWidth, calculateLegendHeight } from './legend.ts'
 
 export default defineCommand({
@@ -23,7 +29,7 @@ export default defineCommand({
   async run({ args }) {
     try {
       const d3 = await getD3()
-      const JSDOM = await getJSDOM()
+      const { document } = await createSvgDocument()
 
       const data = parseScatterData(args.data)
       const colors = parseColors(args.color)
@@ -31,16 +37,12 @@ export default defineCommand({
       const height = Number(args.height)
       const pointSize = Number(args['point-size'])
 
-      // Create DOM for d3
-      const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>')
-      const document = dom.window.document
-
       // Margins for axes
       const margin = { top: 20, right: 20, bottom: 50, left: 60 }
       const chartWidth = width - margin.left - margin.right
       const chartHeight = height - margin.top - margin.bottom
 
-      const legendData = data.map(point => ({
+      const legendData = data.map((point) => ({
         label: point.label ?? '',
         value: point.y
       }))
@@ -51,14 +53,14 @@ export default defineCommand({
       const totalWidth = width + (args.legend ? legendWidth + 20 : 0)
       const totalHeight = Math.max(height, args.legend ? legendHeight + 20 : height)
 
-      const svg = d3.select(document.body)
+      const svg = d3
+        .select(document.body)
         .append('svg')
         .attr('width', totalWidth)
         .attr('height', totalHeight)
         .attr('viewBox', `0 0 ${totalWidth} ${totalHeight}`)
 
-      const g = svg.append('g')
-        .attr('transform', `translate(${margin.left}, ${margin.top})`)
+      const g = svg.append('g').attr('transform', `translate(${margin.left}, ${margin.top})`)
 
       const xExtent = d3.extent(data, (d: ScatterPoint) => d.x)
       const yExtent = d3.extent(data, (d: ScatterPoint) => d.y)
@@ -66,15 +68,9 @@ export default defineCommand({
       const yDomain = normalizeDomain(yExtent)
 
       // Scales
-      const xScale = d3.scaleLinear()
-        .domain(xDomain)
-        .nice()
-        .range([0, chartWidth])
+      const xScale = d3.scaleLinear().domain(xDomain).nice().range([0, chartWidth])
 
-      const yScale = d3.scaleLinear()
-        .domain(yDomain)
-        .nice()
-        .range([chartHeight, 0])
+      const yScale = d3.scaleLinear().domain(yDomain).nice().range([chartHeight, 0])
 
       // Points
       g.selectAll('circle')
@@ -125,8 +121,7 @@ export default defineCommand({
       }
 
       // Style axis lines
-      svg.selectAll('.domain, .tick line')
-        .attr('stroke', '#9CA3AF')
+      svg.selectAll('.domain, .tick line').attr('stroke', '#9CA3AF')
 
       // Add legend if requested
       if (args.legend) {
@@ -139,12 +134,12 @@ export default defineCommand({
       const svgString = document.body.innerHTML
 
       // Import to Figma
-      const result = await sendCommand('import-svg', {
+      const result = (await sendCommand('import-svg', {
         svg: svgString,
         x: Number(args.x),
         y: Number(args.y),
         parentId: args.parent
-      }) as { id: string }
+      })) as { id: string }
 
       // Rename node
       await sendCommand('rename-node', { id: result.id, name: 'Scatter Chart' })
@@ -158,7 +153,9 @@ export default defineCommand({
   }
 })
 
-function normalizeDomain(extent: [number, number] | [number | undefined, number | undefined]): [number, number] {
+function normalizeDomain(
+  extent: [number, number] | [number | undefined, number | undefined]
+): [number, number] {
   const min = extent[0] ?? 0
   const max = extent[1] ?? 0
   if (min === max) {

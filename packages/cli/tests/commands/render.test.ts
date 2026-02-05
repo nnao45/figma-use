@@ -214,10 +214,9 @@ describe('render with line stroke caps', () => {
 
   test('renders Arrow with default endCap', async () => {
     const jsx = `<Arrow x={10} y={10} w={200} stroke="#000000" strokeWidth={2} />`
-    const result = (await run(
-      `render --stdin --parent "${testFrameId}" --json`,
-      jsx
-    )) as { id: string }
+    const result = (await run(`render --stdin --parent "${testFrameId}" --json`, jsx)) as {
+      id: string
+    }
     trackNode(result.id)
 
     const nodeInfo = (await run(`node get ${result.id} --json`)) as {
@@ -244,10 +243,9 @@ describe('render with line stroke caps', () => {
 
   test('renders Arrow with startCap and endCap', async () => {
     const jsx = `<Arrow x={10} y={40} w={200} startCap="circle" endCap="arrow-equilateral" stroke="#3B82F6" strokeWidth={3} />`
-    const result = (await run(
-      `render --stdin --parent "${testFrameId}" --json`,
-      jsx
-    )) as { id: string }
+    const result = (await run(`render --stdin --parent "${testFrameId}" --json`, jsx)) as {
+      id: string
+    }
     trackNode(result.id)
 
     const nodeInfo = (await run(`node get ${result.id} --json`)) as {
@@ -260,10 +258,9 @@ describe('render with line stroke caps', () => {
 
   test('renders Arrow with diamond caps', async () => {
     const jsx = `<Arrow x={10} y={70} w={200} startCap="diamond" endCap="diamond" stroke="#EF4444" strokeWidth={2} />`
-    const result = (await run(
-      `render --stdin --parent "${testFrameId}" --json`,
-      jsx
-    )) as { id: string }
+    const result = (await run(`render --stdin --parent "${testFrameId}" --json`, jsx)) as {
+      id: string
+    }
     trackNode(result.id)
 
     const nodeInfo = (await run(`node get ${result.id} --json`)) as {
@@ -274,10 +271,9 @@ describe('render with line stroke caps', () => {
 
   test('renders Arrow with triangle cap', async () => {
     const jsx = `<Arrow x={10} y={100} w={200} endCap="triangle" stroke="#10B981" strokeWidth={2} />`
-    const result = (await run(
-      `render --stdin --parent "${testFrameId}" --json`,
-      jsx
-    )) as { id: string }
+    const result = (await run(`render --stdin --parent "${testFrameId}" --json`, jsx)) as {
+      id: string
+    }
     trackNode(result.id)
 
     const nodeInfo = (await run(`node get ${result.id} --json`)) as {
@@ -288,10 +284,9 @@ describe('render with line stroke caps', () => {
 
   test('renders Line without caps as LINE type', async () => {
     const jsx = `<Line x={10} y={130} w={200} stroke="#666666" strokeWidth={1} />`
-    const result = (await run(
-      `render --stdin --parent "${testFrameId}" --json`,
-      jsx
-    )) as { id: string }
+    const result = (await run(`render --stdin --parent "${testFrameId}" --json`, jsx)) as {
+      id: string
+    }
     trackNode(result.id)
 
     const nodeInfo = (await run(`node get ${result.id} --json`)) as {

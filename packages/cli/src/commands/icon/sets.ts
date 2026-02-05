@@ -75,7 +75,9 @@ export default defineCommand({
       for (const [prefix, info] of entries) {
         const author = info.author?.name ? dim(` by ${info.author.name}`) : ''
         const samples = info.samples ? dim(` — ${info.samples.join(', ')}`) : ''
-        console.log(`  ${bold(prefix.padEnd(24))} ${String(info.total).padStart(6)} icons  ${info.name}${author}${samples}`)
+        console.log(
+          `  ${bold(prefix.padEnd(24))} ${String(info.total).padStart(6)} icons  ${info.name}${author}${samples}`
+        )
       }
 
       console.log()

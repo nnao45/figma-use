@@ -47,7 +47,13 @@ describe('formatResult', () => {
   })
 
   test('formats node with type and id', () => {
-    const result = formatResult({ id: '1:2', type: 'FRAME', name: 'MyFrame', width: 100, height: 50 })
+    const result = formatResult({
+      id: '1:2',
+      type: 'FRAME',
+      name: 'MyFrame',
+      width: 100,
+      height: 50
+    })
     expect(result).toContain('frame')
     expect(result).toContain('MyFrame')
     expect(result).toContain('1:2')

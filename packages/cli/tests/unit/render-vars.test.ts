@@ -83,9 +83,7 @@ describe('variable registry', () => {
   })
 
   test('resolveVariable resolves by name', () => {
-    loadVariablesIntoRegistry([
-      { id: 'VariableID:100:200', name: 'Colors/Primary' }
-    ])
+    loadVariablesIntoRegistry([{ id: 'VariableID:100:200', name: 'Colors/Primary' }])
     const v = figmaVar('Colors/Primary')
     const resolved = resolveVariable(v)
     expect(resolved.id).toBe('VariableID:100:200')
@@ -116,9 +114,7 @@ describe('variable registry', () => {
   })
 
   test('resolveVariable caches resolution', () => {
-    loadVariablesIntoRegistry([
-      { id: 'VariableID:10:20', name: 'Test/Var' }
-    ])
+    loadVariablesIntoRegistry([{ id: 'VariableID:10:20', name: 'Test/Var' }])
     const v = figmaVar('Test/Var')
     const first = resolveVariable(v)
     const second = resolveVariable(v)
@@ -126,13 +122,9 @@ describe('variable registry', () => {
   })
 
   test('loadVariablesIntoRegistry clears previous entries', () => {
-    loadVariablesIntoRegistry([
-      { id: 'VariableID:1:1', name: 'Old/Var' }
-    ])
+    loadVariablesIntoRegistry([{ id: 'VariableID:1:1', name: 'Old/Var' }])
     expect(getRegistrySize()).toBe(1)
-    loadVariablesIntoRegistry([
-      { id: 'VariableID:2:2', name: 'New/Var' }
-    ])
+    loadVariablesIntoRegistry([{ id: 'VariableID:2:2', name: 'New/Var' }])
     expect(getRegistrySize()).toBe(1)
     const v = figmaVar('Old/Var')
     expect(() => resolveVariable(v)).toThrow('not found')

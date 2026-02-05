@@ -4,7 +4,12 @@ import { parseFigmaPatch, buildPatch } from '../../src/commands/diff/parse.ts'
 
 describe('buildPatch', () => {
   test('builds unified diff format', () => {
-    const patch = buildPatch('/Frame/Rect', '1:2', 'type: RECTANGLE\nopacity: 0.5', 'type: RECTANGLE\nopacity: 1')
+    const patch = buildPatch(
+      '/Frame/Rect',
+      '1:2',
+      'type: RECTANGLE\nopacity: 0.5',
+      'type: RECTANGLE\nopacity: 1'
+    )
     expect(patch).toContain('--- /Frame/Rect #1:2')
     expect(patch).toContain('+++ /Frame/Rect #1:2')
     expect(patch).toContain('@@ -1,2 +1,2 @@')
@@ -29,7 +34,12 @@ describe('buildPatch', () => {
 
 describe('parseFigmaPatch', () => {
   test('parses single patch', () => {
-    const patchText = buildPatch('/Frame/Rect', '1:2', 'type: RECTANGLE\nopacity: 0.5', 'type: RECTANGLE\nopacity: 1')
+    const patchText = buildPatch(
+      '/Frame/Rect',
+      '1:2',
+      'type: RECTANGLE\nopacity: 0.5',
+      'type: RECTANGLE\nopacity: 1'
+    )
     const patches = parseFigmaPatch(patchText)
     expect(patches).toHaveLength(1)
     expect(patches[0].path).toBe('/Frame/Rect')
@@ -39,12 +49,9 @@ describe('parseFigmaPatch', () => {
   })
 
   test('detects create operation', () => {
-    const patchText = [
-      '--- /dev/null',
-      '+++ /New #1:3',
-      '@@ -0,0 +1,1 @@',
-      '+type: FRAME'
-    ].join('\n')
+    const patchText = ['--- /dev/null', '+++ /New #1:3', '@@ -0,0 +1,1 @@', '+type: FRAME'].join(
+      '\n'
+    )
     const patches = parseFigmaPatch(patchText)
     expect(patches).toHaveLength(1)
     expect(patches[0].isCreate).toBe(true)
@@ -52,12 +59,9 @@ describe('parseFigmaPatch', () => {
   })
 
   test('detects delete operation', () => {
-    const patchText = [
-      '--- /Old #1:4',
-      '+++ /dev/null',
-      '@@ -1,1 +0,0 @@',
-      '-type: FRAME'
-    ].join('\n')
+    const patchText = ['--- /Old #1:4', '+++ /dev/null', '@@ -1,1 +0,0 @@', '-type: FRAME'].join(
+      '\n'
+    )
     const patches = parseFigmaPatch(patchText)
     expect(patches).toHaveLength(1)
     expect(patches[0].isDelete).toBe(true)
@@ -84,13 +88,9 @@ describe('parseFigmaPatch', () => {
   })
 
   test('handles path without node ID', () => {
-    const patchText = [
-      '--- /SomePath',
-      '+++ /SomePath',
-      '@@ -1,1 +1,1 @@',
-      '-old',
-      '+new'
-    ].join('\n')
+    const patchText = ['--- /SomePath', '+++ /SomePath', '@@ -1,1 +1,1 @@', '-old', '+new'].join(
+      '\n'
+    )
     const patches = parseFigmaPatch(patchText)
     expect(patches[0].path).toBe('/SomePath')
     expect(patches[0].nodeId).toBeNull()

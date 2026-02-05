@@ -38,7 +38,11 @@ async function findTargetNode(comment: Comment): Promise<TargetNode | null> {
 }
 
 function formatComment(c: Comment, target?: TargetNode | null): string {
-  const node = target ? dim(` on ${target.name} [${target.id}]`) : c.client_meta?.node_id ? dim(` on ${c.client_meta.node_id}`) : ''
+  const node = target
+    ? dim(` on ${target.name} [${target.id}]`)
+    : c.client_meta?.node_id
+      ? dim(` on ${c.client_meta.node_id}`)
+      : ''
   const reply = c.parent_id ? dim(' (reply)') : ''
   const date = new Date(c.created_at).toLocaleDateString()
   return `${accent(c.user.handle)}${reply}${node} ${dim(date)}\n  ${c.message}\n  ${dim(`id: ${c.id}`)}`

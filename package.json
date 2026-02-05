@@ -1,6 +1,6 @@
 {
   "name": "@nnao45/figma-use",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Control Figma from the command line. Full read/write access for AI agents.",
   "keywords": [
     "ai",
@@ -47,7 +47,7 @@
   },
   "scripts": {
     "build": "bun run build:cli",
-    "build:cli": "bun build packages/cli/src/index.ts --outdir dist/cli --target node --minify --external esbuild --external typescript --external @modelcontextprotocol/sdk --external oxfmt --external whaticon --external pngjs --external pixelmatch",
+    "build:cli": "bun build packages/cli/src/index.ts --outdir dist/cli --target node --minify --external esbuild --external typescript --external @modelcontextprotocol/sdk --external oxfmt --external whaticon --external pngjs --external pixelmatch --external d3 --external jsdom",
     "test": "cd packages/cli && bun test",
     "lint": "oxlint packages/",
     "format": "oxfmt --write packages/",

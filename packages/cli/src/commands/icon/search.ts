@@ -5,7 +5,9 @@ import { dim, bold } from '../../format.ts'
 import { searchIcons } from './api.ts'
 
 export default defineCommand({
-  meta: { description: 'Search icons from Iconify (600K+ icons from Lucide, Material Design, etc.)' },
+  meta: {
+    description: 'Search icons from Iconify (600K+ icons from Lucide, Material Design, etc.)'
+  },
   args: {
     query: {
       type: 'positional',

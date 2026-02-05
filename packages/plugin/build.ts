@@ -13,7 +13,7 @@ await esbuild.build({
   outfile: path.join(distDir, 'main.js'),
   format: 'iife',
   target: 'es2020',
-  minify: false,
+  minify: false
 })
 
 // Create minimal UI HTML

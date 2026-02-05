@@ -1,6 +1,12 @@
 import { describe, test, expect, mock, beforeEach, afterEach } from 'bun:test'
 
-import { iconifyFetch, searchIcons, listCollections, getCollection, pMap } from '../../src/commands/icon/api.ts'
+import {
+  iconifyFetch,
+  searchIcons,
+  listCollections,
+  getCollection,
+  pMap
+} from '../../src/commands/icon/api.ts'
 
 // --- Mock data ---
 
@@ -74,9 +80,7 @@ describe('icon api', () => {
     })
 
     test('throws descriptive error on timeout', async () => {
-      globalThis.fetch = mock(() =>
-        Promise.reject(new Error('ETIMEDOUT'))
-      ) as typeof fetch
+      globalThis.fetch = mock(() => Promise.reject(new Error('ETIMEDOUT'))) as typeof fetch
       await expect(iconifyFetch('/test', 'test')).rejects.toThrow('timed out')
     })
 

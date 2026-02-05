@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty'
 
 import { sendCommand, printResult, handleError } from '../../../client.ts'
-import { getD3, getJSDOM, parseData, parseColors, type DataPoint } from './d3-utils.ts'
+import { getD3, createSvgDocument, parseData, parseColors, type DataPoint } from './d3-utils.ts'
 import { createLegendSvg, calculateLegendWidth, calculateLegendHeight } from './legend.ts'
 
 export default defineCommand({
@@ -23,7 +23,7 @@ export default defineCommand({
   async run({ args }) {
     try {
       const d3 = await getD3()
-      const JSDOM = await getJSDOM()
+      const { document } = await createSvgDocument()
 
       const data = parseData(args.data)
       const colors = parseColors(args.color)
@@ -31,10 +31,6 @@ export default defineCommand({
       const width = Number(args.width)
       const height = Number(args.height)
       const fillOpacity = Number(args.opacity)
-
-      // Create DOM for d3
-      const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>')
-      const document = dom.window.document
 
       // Margins for axes
       const margin = { top: 20, right: 20, bottom: 40, left: 50 }
@@ -47,34 +43,38 @@ export default defineCommand({
       const totalWidth = width + (args.legend ? legendWidth + 20 : 0)
       const totalHeight = Math.max(height, args.legend ? legendHeight + 20 : height)
 
-      const svg = d3.select(document.body)
+      const svg = d3
+        .select(document.body)
         .append('svg')
         .attr('width', totalWidth)
         .attr('height', totalHeight)
         .attr('viewBox', `0 0 ${totalWidth} ${totalHeight}`)
 
-      const g = svg.append('g')
-        .attr('transform', `translate(${margin.left}, ${margin.top})`)
+      const g = svg.append('g').attr('transform', `translate(${margin.left}, ${margin.top})`)
 
       // Scales
-      const xScale = d3.scalePoint<string>()
-        .domain(data.map(d => d.label))
+      const xScale = d3
+        .scalePoint<string>()
+        .domain(data.map((d) => d.label))
         .range([0, chartWidth])
         .padding(0.5)
 
-      const yScale = d3.scaleLinear()
+      const yScale = d3
+        .scaleLinear()
         .domain([0, d3.max(data, (d: DataPoint) => d.value) ?? 0])
         .nice()
         .range([chartHeight, 0])
 
       // Area generator
-      const areaGenerator = d3.area<DataPoint>()
+      const areaGenerator = d3
+        .area<DataPoint>()
         .x((d: DataPoint) => xScale(d.label) ?? 0)
         .y0(chartHeight)
         .y1((d: DataPoint) => yScale(d.value))
 
       // Line generator
-      const lineGenerator = d3.line<DataPoint>()
+      const lineGenerator = d3
+        .line<DataPoint>()
         .x((d: DataPoint) => xScale(d.label) ?? 0)
         .y((d: DataPoint) => yScale(d.value))
 
@@ -116,8 +116,7 @@ export default defineCommand({
         .attr('font-size', '11')
 
       // Style axis lines
-      svg.selectAll('.domain, .tick line')
-        .attr('stroke', '#9CA3AF')
+      svg.selectAll('.domain, .tick line').attr('stroke', '#9CA3AF')
 
       // Add legend if requested
       if (args.legend) {
@@ -130,12 +129,12 @@ export default defineCommand({
       const svgString = document.body.innerHTML
 
       // Import to Figma
-      const result = await sendCommand('import-svg', {
+      const result = (await sendCommand('import-svg', {
         svg: svgString,
         x: Number(args.x),
         y: Number(args.y),
         parentId: args.parent
-      }) as { id: string }
+      })) as { id: string }
 
       // Rename node
       await sendCommand('rename-node', { id: result.id, name: 'Area Chart' })

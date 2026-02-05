@@ -11,31 +11,25 @@ export interface LegendOptions {
 }
 
 export function createLegendSvg(options: LegendOptions): string {
-  const {
-    data,
-    colors,
-    x,
-    y,
-    itemHeight = 20,
-    itemSpacing = 4,
-    boxSize = 12
-  } = options
+  const { data, colors, x, y, itemHeight = 20, itemSpacing = 4, boxSize = 12 } = options
 
-  const items = data.map((d, i) => {
-    const itemY = y + i * (itemHeight + itemSpacing)
-    const color = colors[i % colors.length]
-    return `
+  const items = data
+    .map((d, i) => {
+      const itemY = y + i * (itemHeight + itemSpacing)
+      const color = colors[i % colors.length]
+      return `
       <rect x="${x}" y="${itemY}" width="${boxSize}" height="${boxSize}" fill="${color}" />
       <text x="${x + boxSize + 8}" y="${itemY + boxSize - 2}" font-family="system-ui, sans-serif" font-size="12" fill="#374151">${escapeXml(d.label)}</text>
     `
-  }).join('')
+    })
+    .join('')
 
   return items
 }
 
 export function calculateLegendWidth(data: DataPoint[]): number {
   // Estimate legend width based on longest label
-  const maxLabelLength = Math.max(...data.map(d => d.label.length))
+  const maxLabelLength = Math.max(...data.map((d) => d.label.length))
   return 12 + 8 + maxLabelLength * 7 + 10 // boxSize + gap + text + padding
 }
 

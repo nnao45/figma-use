@@ -12,10 +12,8 @@ export default defineCommand({
   },
   async run({ args }) {
     try {
-      const result = await sendCommand<Array<{ id: string; name: string; type: string }>>(
-        'eval',
-        {
-          code: `
+      const result = await sendCommand<Array<{ id: string; name: string; type: string }>>('eval', {
+        code: `
           const comp = await figma.getNodeByIdAsync(${JSON.stringify(args.id)})
           if (!comp || (comp.type !== 'COMPONENT' && comp.type !== 'COMPONENT_SET')) {
             throw new Error('Node is not a component: ' + ${JSON.stringify(args.id)})
@@ -53,8 +51,7 @@ export default defineCommand({
 
           return results
         `
-        }
-      )
+      })
 
       if (args.json) {
         console.log(JSON.stringify(result, null, 2))

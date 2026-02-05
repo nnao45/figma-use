@@ -59,12 +59,9 @@ describe('formatFill', () => {
   })
 
   test('returns first solid fill', () => {
-    expect(
-      formatFill([
-        { type: 'LINEAR_GRADIENT' },
-        { type: 'SOLID', color: '#00FF00' }
-      ])
-    ).toBe('#00FF00')
+    expect(formatFill([{ type: 'LINEAR_GRADIENT' }, { type: 'SOLID', color: '#00FF00' }])).toBe(
+      '#00FF00'
+    )
   })
 
   test('returns null when no solid fill', () => {
