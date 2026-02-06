@@ -1,6 +1,6 @@
 {
   "name": "@nnao45/figma-use",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Control Figma from the command line. Full read/write access for AI agents.",
   "keywords": [
     "ai",
