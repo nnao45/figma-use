@@ -126,6 +126,28 @@ figma-use set props <id> --prop "Text=Hello" --prop "Visible=true"
 figma-use set minmax <id> --min-width 100 --max-width 500
 ```
 
+## Interactions
+
+```bash
+figma-use interaction list <id>
+figma-use interaction add <id> --trigger ON_CLICK --action NAVIGATE --destination <dest-id>
+figma-use interaction add <id> --trigger AFTER_TIMEOUT --timeout 500 --action OVERLAY --destination <dest-id>
+figma-use interaction remove <id> --index 0
+figma-use interaction remove <id> --all
+
+# Shortcuts
+figma-use interaction navigate <id> <dest-id>
+figma-use interaction overlay <id> <dest-id>
+figma-use interaction navigate <id> <dest-id> --transition SMART_ANIMATE
+figma-use interaction overlay <id> <dest-id> --transition SLIDE_IN --direction LEFT
+```
+
+Triggers: `ON_CLICK`, `ON_HOVER`, `ON_PRESS`, `ON_DRAG`, `MOUSE_ENTER`, `MOUSE_LEAVE`, `AFTER_TIMEOUT`
+
+Actions: `NAVIGATE`, `OVERLAY`, `SWAP`, `SCROLL_TO`, `CHANGE_TO`, `BACK`, `CLOSE`, `URL`
+
+Transitions: `DISSOLVE`, `SMART_ANIMATE`, `MOVE_IN`, `MOVE_OUT`, `PUSH`, `SLIDE_IN`, `SLIDE_OUT`
+
 ## Node Operations
 
 ```bash

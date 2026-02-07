@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `create chart scatter` and `create chart bubble` commands
+- `interaction` commands for prototyping reactions (add/list/remove/navigate/overlay)
 
 ## [0.1.4] - 2026-02-03
 

@@ -92,6 +92,23 @@ Use `<Instance>` to create component instances:
 
 ⚠️ **Always use `--x` and `--y`** to position renders. Don't stack everything at (0, 0).
 
+## Interactions
+
+Add and manage prototyping interactions on nodes:
+
+```bash
+figma-use interaction add <id> --trigger ON_CLICK --action NAVIGATE --destination <dest-id>
+figma-use interaction navigate <id> <dest-id> --transition SMART_ANIMATE
+figma-use interaction overlay <id> <dest-id> --trigger ON_HOVER
+figma-use interaction list <id>
+figma-use interaction remove <id> --index 0
+figma-use interaction remove <id> --all
+```
+
+Triggers: `ON_CLICK`, `ON_HOVER`, `ON_PRESS`, `ON_DRAG`, `MOUSE_ENTER`, `MOUSE_LEAVE`, `AFTER_TIMEOUT`
+
+Actions: `NAVIGATE`, `OVERLAY`, `SWAP`, `SCROLL_TO`, `CHANGE_TO`, `BACK`, `CLOSE`, `URL`
+
 ## Arrows
 
 Create arrows with customizable start/end caps. Use `create arrow` command (not `create line`).
