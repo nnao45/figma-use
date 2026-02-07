@@ -91,6 +91,154 @@ function normalizeLineCap(cap?: string): StrokeCap | undefined {
   return mapped
 }
 
+const INTERACTION_TRIGGER_TYPES = new Set([
+  'ON_CLICK',
+  'ON_HOVER',
+  'ON_PRESS',
+  'ON_DRAG',
+  'MOUSE_ENTER',
+  'MOUSE_LEAVE',
+  'AFTER_TIMEOUT'
+])
+
+const INTERACTION_ACTION_TYPES = new Set([
+  'NAVIGATE',
+  'OVERLAY',
+  'SWAP',
+  'SCROLL_TO',
+  'CHANGE_TO',
+  'BACK',
+  'CLOSE',
+  'URL'
+])
+
+const TRANSITION_TYPES = new Set([
+  'DISSOLVE',
+  'SMART_ANIMATE',
+  'MOVE_IN',
+  'MOVE_OUT',
+  'PUSH',
+  'SLIDE_IN',
+  'SLIDE_OUT'
+])
+
+const DIRECTION_TYPES = new Set(['LEFT', 'RIGHT', 'TOP', 'BOTTOM'])
+
+const EASING_TYPES = new Set([
+  'LINEAR',
+  'EASE_IN',
+  'EASE_OUT',
+  'EASE_IN_AND_OUT',
+  'GENTLE',
+  'QUICK',
+  'BOUNCY',
+  'SLOW'
+])
+
+function buildEasing(easing?: string): { type: string } {
+  const normalized = (easing || 'EASE_IN_AND_OUT').toUpperCase()
+  if (!EASING_TYPES.has(normalized)) {
+    throw new Error(
+      `Invalid easing "${easing}". Allowed: ${Array.from(EASING_TYPES)
+        .map((v) => `"${v}"`)
+        .join(', ')}`
+    )
+  }
+  return { type: normalized }
+}
+
+function buildTransition(
+  type?: string,
+  direction?: string,
+  durationMs?: number,
+  easing?: string
+): Record<string, unknown> | undefined {
+  if (!type) return undefined
+  const normalized = type.toUpperCase()
+  if (!TRANSITION_TYPES.has(normalized)) {
+    throw new Error(
+      `Invalid transition "${type}". Allowed: ${Array.from(TRANSITION_TYPES)
+        .map((v) => `"${v}"`)
+        .join(', ')}`
+    )
+  }
+
+  const duration = Math.max(0, (durationMs ?? 300) / 1000)
+  const easingObj = buildEasing(easing)
+
+  if (normalized === 'DISSOLVE' || normalized === 'SMART_ANIMATE') {
+    return { type: normalized, duration, easing: easingObj }
+  }
+
+  const dir = (direction || '').toUpperCase()
+  if (!DIRECTION_TYPES.has(dir)) {
+    throw new Error(
+      `Transition "${normalized}" requires --direction (${Array.from(DIRECTION_TYPES).join(
+        ', '
+      )})`
+    )
+  }
+
+  return {
+    type: normalized,
+    direction: dir,
+    duration,
+    easing: easingObj,
+    matchLayers: false
+  }
+}
+
+function serializeTransition(transition: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = { type: transition.type }
+  if (typeof transition.duration === 'number') {
+    result.duration = Math.round(transition.duration * 1000)
+  }
+  if (transition.easing) result.easing = transition.easing
+  if (transition.direction) result.direction = transition.direction
+  if (transition.matchLayers !== undefined) result.matchLayers = transition.matchLayers
+  return result
+}
+
+function serializeReaction(reaction: Record<string, unknown>): Record<string, unknown> {
+  const trigger = reaction.trigger as Record<string, unknown> | undefined
+  const action = reaction.action as Record<string, unknown> | undefined
+  const actions = reaction.actions as Array<Record<string, unknown>> | undefined
+  const resolvedActions = Array.isArray(actions)
+    ? actions
+    : action
+      ? [action]
+      : []
+
+  const serializedTrigger: Record<string, unknown> = {}
+  if (trigger?.type) serializedTrigger.type = trigger.type
+  if ('timeout' in (trigger || {})) serializedTrigger.timeout = trigger?.timeout
+  if ('delay' in (trigger || {})) serializedTrigger.delay = trigger?.delay
+  if ('deprecatedVersion' in (trigger || {}))
+    serializedTrigger.deprecatedVersion = trigger?.deprecatedVersion
+  if ('device' in (trigger || {})) serializedTrigger.device = trigger?.device
+  if ('keyCodes' in (trigger || {})) serializedTrigger.keyCodes = trigger?.keyCodes
+
+  const serializedActions = resolvedActions.map((act) => {
+    const base: Record<string, unknown> = { type: act.type }
+    if (act.type === 'NODE') {
+      if (act.navigation) base.navigation = act.navigation
+      if (act.destinationId) base.destinationId = act.destinationId
+      if (act.transition) base.transition = serializeTransition(act.transition)
+      if (act.preserveScrollPosition !== undefined)
+        base.preserveScrollPosition = act.preserveScrollPosition
+    } else if (act.type === 'URL') {
+      if (act.url) base.url = act.url
+      if (act.openInNewTab !== undefined) base.openInNewTab = act.openInNewTab
+    }
+    return base
+  })
+
+  return {
+    trigger: serializedTrigger,
+    actions: serializedActions
+  }
+}
+
 // Fast node creation for batch operations - skips full serialization
 async function createNodeFast(
   command: string,
@@ -336,6 +484,128 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       return results
     }
 
+    case 'add-interaction': {
+      const {
+        nodeId,
+        trigger,
+        action,
+        destinationId,
+        url,
+        transition,
+        direction,
+        durationMs,
+        easing,
+        timeoutMs,
+        preserveScrollPosition
+      } = args as {
+        nodeId: string
+        trigger: string
+        action: string
+        destinationId?: string
+        url?: string
+        transition?: string
+        direction?: string
+        durationMs?: number
+        easing?: string
+        timeoutMs?: number
+        preserveScrollPosition?: boolean
+      }
+
+      const node = (await figma.getNodeByIdAsync(nodeId)) as SceneNode | null
+      if (!node) throw new Error('Node not found')
+      if (!('reactions' in node)) throw new Error('Node does not support reactions')
+
+      const triggerType = trigger?.toUpperCase()
+      if (!triggerType || !INTERACTION_TRIGGER_TYPES.has(triggerType)) {
+        throw new Error(
+          `Invalid trigger "${trigger}". Allowed: ${Array.from(INTERACTION_TRIGGER_TYPES)
+            .map((v) => `"${v}"`)
+            .join(', ')}`
+        )
+      }
+
+      const actionType = action?.toUpperCase()
+      if (!actionType || !INTERACTION_ACTION_TYPES.has(actionType)) {
+        throw new Error(
+          `Invalid action "${action}". Allowed: ${Array.from(INTERACTION_ACTION_TYPES)
+            .map((v) => `"${v}"`)
+            .join(', ')}`
+        )
+      }
+
+      const triggerObj: Record<string, unknown> = { type: triggerType }
+      if (triggerType === 'AFTER_TIMEOUT') {
+        if (typeof timeoutMs !== 'number' || Number.isNaN(timeoutMs)) {
+          throw new Error('AFTER_TIMEOUT requires --timeout (ms)')
+        }
+        triggerObj.timeout = timeoutMs
+      }
+      if (triggerType === 'MOUSE_ENTER' || triggerType === 'MOUSE_LEAVE') {
+        triggerObj.delay = 0
+        triggerObj.deprecatedVersion = false
+      }
+
+      let actionObj: Record<string, unknown>
+      if (actionType === 'URL') {
+        if (!url) throw new Error('URL action requires --url')
+        actionObj = { type: 'URL', url }
+      } else if (actionType === 'BACK' || actionType === 'CLOSE') {
+        actionObj = { type: actionType }
+      } else {
+        if (!destinationId) {
+          throw new Error(`${actionType} action requires --destination`)
+        }
+        const transitionObj = buildTransition(transition, direction, durationMs, easing)
+        actionObj = {
+          type: 'NODE',
+          navigation: actionType,
+          destinationId
+        }
+        if (transitionObj) actionObj.transition = transitionObj
+        if (preserveScrollPosition !== undefined) {
+          actionObj.preserveScrollPosition = preserveScrollPosition
+        }
+      }
+
+      const reaction = {
+        trigger: triggerObj,
+        actions: [actionObj],
+        action: actionObj
+      }
+
+      const current = Array.isArray((node as any).reactions) ? (node as any).reactions : []
+      const updated = [...current, reaction]
+      await (node as any).setReactionsAsync(updated)
+
+      return updated.map(serializeReaction)
+    }
+
+    case 'remove-interaction': {
+      const { nodeId, index, all } = args as {
+        nodeId: string
+        index?: number
+        all?: boolean
+      }
+      const node = (await figma.getNodeByIdAsync(nodeId)) as SceneNode | null
+      if (!node) throw new Error('Node not found')
+      if (!('reactions' in node)) throw new Error('Node does not support reactions')
+
+      const current = Array.isArray((node as any).reactions) ? (node as any).reactions : []
+      if (all) {
+        await (node as any).setReactionsAsync([])
+        return []
+      }
+      if (typeof index !== 'number' || Number.isNaN(index)) {
+        throw new Error('remove-interaction requires --index or --all')
+      }
+      if (index < 0 || index >= current.length) {
+        throw new Error(`Interaction index out of range: ${index}`)
+      }
+      const updated = current.filter((_: unknown, i: number) => i !== index)
+      await (node as any).setReactionsAsync(updated)
+      return updated.map(serializeReaction)
+    }
+
     // ==================== READ ====================
     case 'get-selection':
       return figma.currentPage.selection.map(serializeNode)
@@ -344,6 +614,15 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
       const { id } = args as { id: string }
       const node = await figma.getNodeByIdAsync(id)
       return node ? serializeNode(node) : null
+    }
+
+    case 'list-interactions': {
+      const { nodeId } = args as { nodeId: string }
+      const node = (await figma.getNodeByIdAsync(nodeId)) as SceneNode | null
+      if (!node) throw new Error('Node not found')
+      if (!('reactions' in node)) throw new Error('Node does not support reactions')
+      const current = Array.isArray((node as any).reactions) ? (node as any).reactions : []
+      return current.map(serializeReaction)
     }
 
     case 'get-ancestors': {
@@ -1299,11 +1578,67 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
 
     // ==================== UPDATE POSITION/SIZE ====================
     case 'move-node': {
-      const { id, x, y } = args as { id: string; x: number; y: number }
+      const { id, x, y, dx, dy } = args as {
+        id: string
+        x?: number
+        y?: number
+        dx?: number
+        dy?: number
+      }
       const node = (await figma.getNodeByIdAsync(id)) as SceneNode | null
       if (!node) throw new Error('Node not found')
-      node.x = x
-      node.y = y
+      if (dx !== undefined || dy !== undefined) {
+        node.x += dx ?? 0
+        node.y += dy ?? 0
+      } else {
+        if (x !== undefined) node.x = x
+        if (y !== undefined) node.y = y
+      }
+      return serializeNode(node)
+    }
+
+    case 'scale-node': {
+      const { id, factor } = args as { id: string; factor: number }
+      const node = (await figma.getNodeByIdAsync(id)) as SceneNode | null
+      if (!node) throw new Error('Node not found')
+      if (factor <= 0) throw new Error('Scale factor must be positive')
+      if (!('resize' in node)) throw new Error('Node cannot be scaled')
+
+      const oldWidth = node.width
+      const oldHeight = node.height
+      const newWidth = oldWidth * factor
+      const newHeight = oldHeight * factor
+
+      // Adjust position so that scaling is from center
+      node.x = node.x + (oldWidth - newWidth) / 2
+      node.y = node.y + (oldHeight - newHeight) / 2
+
+      node.resize(newWidth, newHeight)
+      return serializeNode(node)
+    }
+
+    case 'flip-node': {
+      const { id, axis } = args as { id: string; axis: 'x' | 'y' }
+      const node = (await figma.getNodeByIdAsync(id)) as SceneNode | null
+      if (!node) throw new Error('Node not found')
+
+      // Get the current absolute transform
+      const transform = node.relativeTransform
+      const [[a, c, tx], [b, d, ty]] = transform
+
+      if (axis === 'x') {
+        // Flip horizontally: negate scaleX and skewY columns, adjust position
+        node.relativeTransform = [
+          [-a, c, tx + node.width * a],
+          [-b, d, ty + node.width * b]
+        ]
+      } else {
+        // Flip vertically: negate scaleY and skewX rows, adjust position
+        node.relativeTransform = [
+          [a, -c, tx + node.height * c],
+          [b, -d, ty + node.height * d]
+        ]
+      }
       return serializeNode(node)
     }
 
@@ -5361,6 +5696,13 @@ function serializeNode(node: BaseNode): object {
   // Children count for containers
   if ('children' in node) {
     base.childCount = (node as ChildrenMixin).children.length
+  }
+
+  if ('reactions' in (node as any) && Array.isArray((node as any).reactions)) {
+    const reactions = (node as any).reactions as Array<Record<string, unknown>>
+    if (reactions.length > 0) {
+      base.reactions = reactions.map(serializeReaction)
+    }
   }
 
   return base

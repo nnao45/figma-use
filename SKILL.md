@@ -92,6 +92,23 @@ Use `<Instance>` to create component instances:
 
 ⚠️ **Always use `--x` and `--y`** to position renders. Don't stack everything at (0, 0).
 
+## Interactions
+
+Add and manage prototyping interactions on nodes:
+
+```bash
+figma-use interaction add <id> --trigger ON_CLICK --action NAVIGATE --destination <dest-id>
+figma-use interaction navigate <id> <dest-id> --transition SMART_ANIMATE
+figma-use interaction overlay <id> <dest-id> --trigger ON_HOVER
+figma-use interaction list <id>
+figma-use interaction remove <id> --index 0
+figma-use interaction remove <id> --all
+```
+
+Triggers: `ON_CLICK`, `ON_HOVER`, `ON_PRESS`, `ON_DRAG`, `MOUSE_ENTER`, `MOUSE_LEAVE`, `AFTER_TIMEOUT`
+
+Actions: `NAVIGATE`, `OVERLAY`, `SWAP`, `SCROLL_TO`, `CHANGE_TO`, `BACK`, `CLOSE`, `URL`
+
 ## Arrows
 
 Create arrows with customizable start/end caps. Use `create arrow` command (not `create line`).
@@ -502,7 +519,11 @@ figma-use set text-resize <id> height   # Wrap text (height auto, fixed width)
 figma-use set layout <id> --mode VERTICAL --gap 12 --padding 16
 figma-use set layout <id> --mode GRID --cols "1fr 1fr 1fr" --rows "auto" --gap 16
 figma-use node move <id> --x 100 --y 200
+figma-use node move <id> --dx 10 --dy -5   # Relative move
 figma-use node resize <id> --width 300 --height 200
+figma-use node scale <id> --factor 1.5     # Scale 150% from center
+figma-use node flip <id> --axis x          # Flip horizontally
+figma-use node flip <id> --axis y          # Flip vertically
 figma-use node delete <id> [id2...]
 figma-use node to-component <id>
 

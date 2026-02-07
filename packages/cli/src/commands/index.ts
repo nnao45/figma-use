@@ -33,6 +33,7 @@ export { default as group } from './group/index.ts'
 export { default as component } from './component/index.ts'
 export { default as instance } from './instance/index.ts'
 export { default as connector } from './connector/index.ts'
+export { default as interaction } from './interaction/index.ts'
 
 // Icon management
 export { default as icon } from './icon/index.ts'
