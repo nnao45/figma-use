@@ -186,6 +186,17 @@ Load images from URL:
 <Image src="https://example.com/photo.jpg" w={200} h={150} />
 ```
 
+### Interactions
+
+Add prototyping interactions:
+
+```bash
+figma-use interaction add <id> --trigger ON_CLICK --action NAVIGATE --destination <dest-id>
+figma-use interaction navigate <id> <dest-id> --transition SMART_ANIMATE
+figma-use interaction overlay <id> <dest-id> --trigger ON_HOVER
+figma-use interaction list <id>
+```
+
 ### Export to JSX
 
 Convert any Figma node back to JSX:
