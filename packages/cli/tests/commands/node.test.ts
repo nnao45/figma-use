@@ -170,6 +170,99 @@ describe('node', () => {
     expect(ancestors.length).toBe(1)
   })
 
+  test('move with dx/dy applies relative movement', async () => {
+    // First set to known position
+    await run(`node move ${nodeId} --x 100 --y 100 --json`)
+    const moved = (await run(`node move ${nodeId} --dx 30 --dy -20 --json`)) as any
+    expect(moved.x).toBe(130)
+    expect(moved.y).toBe(80)
+  })
+
+  test('move with only dx moves only x', async () => {
+    await run(`node move ${nodeId} --x 50 --y 50 --json`)
+    const moved = (await run(`node move ${nodeId} --dx 25 --json`)) as any
+    expect(moved.x).toBe(75)
+    expect(moved.y).toBe(50)
+  })
+
+  test('move with only dy moves only y', async () => {
+    await run(`node move ${nodeId} --x 50 --y 50 --json`)
+    const moved = (await run(`node move ${nodeId} --dy 15 --json`)) as any
+    expect(moved.x).toBe(50)
+    expect(moved.y).toBe(65)
+  })
+
+  test('scale changes size proportionally', async () => {
+    // Set to known size
+    await run(`node resize ${nodeId} --width 100 --height 50 --json`)
+    await run(`node move ${nodeId} --x 0 --y 0 --json`)
+
+    const scaled = (await run(`node scale ${nodeId} --factor 2 --json`)) as any
+    expect(scaled.width).toBe(200)
+    expect(scaled.height).toBe(100)
+  })
+
+  test('scale preserves center position', async () => {
+    await run(`node resize ${nodeId} --width 100 --height 100 --json`)
+    await run(`node move ${nodeId} --x 100 --y 100 --json`)
+    // Center is at (150, 150)
+
+    const scaled = (await run(`node scale ${nodeId} --factor 0.5 --json`)) as any
+    expect(scaled.width).toBe(50)
+    expect(scaled.height).toBe(50)
+    // Center should still be at (150, 150): x=125, y=125
+    expect(scaled.x).toBe(125)
+    expect(scaled.y).toBe(125)
+  })
+
+  test('scale by 1 does not change anything', async () => {
+    await run(`node resize ${nodeId} --width 80 --height 60 --json`)
+    await run(`node move ${nodeId} --x 10 --y 20 --json`)
+
+    const scaled = (await run(`node scale ${nodeId} --factor 1 --json`)) as any
+    expect(scaled.width).toBe(80)
+    expect(scaled.height).toBe(60)
+    expect(scaled.x).toBe(10)
+    expect(scaled.y).toBe(20)
+  })
+
+  test('flip x mirrors node horizontally', async () => {
+    const rect = (await run(
+      `create rect --x 50 --y 50 --width 100 --height 80 --fill "#BBBBBB" --parent "${testFrameId}" --json`
+    )) as any
+    trackNode(rect.id)
+
+    const flipped = (await run(`node flip ${rect.id} --axis x --json`)) as any
+    expect(flipped.id).toBe(rect.id)
+  })
+
+  test('flip y mirrors node vertically', async () => {
+    const rect = (await run(
+      `create rect --x 50 --y 50 --width 100 --height 80 --fill "#CCCCCC" --parent "${testFrameId}" --json`
+    )) as any
+    trackNode(rect.id)
+
+    const flipped = (await run(`node flip ${rect.id} --axis y --json`)) as any
+    expect(flipped.id).toBe(rect.id)
+  })
+
+  test('flip x twice restores original transform', async () => {
+    const rect = (await run(
+      `create rect --x 30 --y 30 --width 60 --height 40 --fill "#DDDDDD" --parent "${testFrameId}" --json`
+    )) as any
+    trackNode(rect.id)
+
+    // Get original state
+    const original = (await run(`node get ${rect.id} --json`)) as any
+
+    // Flip x twice
+    await run(`node flip ${rect.id} --axis x --json`)
+    const restored = (await run(`node flip ${rect.id} --axis x --json`)) as any
+
+    expect(Math.round(restored.width)).toBe(Math.round(original.width))
+    expect(Math.round(restored.height)).toBe(Math.round(original.height))
+  })
+
   test('bindings returns empty when no variables', async () => {
     const rect = (await run(
       `create rect --x 300 --y 600 --width 50 --height 50 --fill "#FF0000" --json`

@@ -1299,11 +1299,67 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
 
     // ==================== UPDATE POSITION/SIZE ====================
     case 'move-node': {
-      const { id, x, y } = args as { id: string; x: number; y: number }
+      const { id, x, y, dx, dy } = args as {
+        id: string
+        x?: number
+        y?: number
+        dx?: number
+        dy?: number
+      }
       const node = (await figma.getNodeByIdAsync(id)) as SceneNode | null
       if (!node) throw new Error('Node not found')
-      node.x = x
-      node.y = y
+      if (dx !== undefined || dy !== undefined) {
+        node.x += dx ?? 0
+        node.y += dy ?? 0
+      } else {
+        if (x !== undefined) node.x = x
+        if (y !== undefined) node.y = y
+      }
+      return serializeNode(node)
+    }
+
+    case 'scale-node': {
+      const { id, factor } = args as { id: string; factor: number }
+      const node = (await figma.getNodeByIdAsync(id)) as SceneNode | null
+      if (!node) throw new Error('Node not found')
+      if (factor <= 0) throw new Error('Scale factor must be positive')
+      if (!('resize' in node)) throw new Error('Node cannot be scaled')
+
+      const oldWidth = node.width
+      const oldHeight = node.height
+      const newWidth = oldWidth * factor
+      const newHeight = oldHeight * factor
+
+      // Adjust position so that scaling is from center
+      node.x = node.x + (oldWidth - newWidth) / 2
+      node.y = node.y + (oldHeight - newHeight) / 2
+
+      node.resize(newWidth, newHeight)
+      return serializeNode(node)
+    }
+
+    case 'flip-node': {
+      const { id, axis } = args as { id: string; axis: 'x' | 'y' }
+      const node = (await figma.getNodeByIdAsync(id)) as SceneNode | null
+      if (!node) throw new Error('Node not found')
+
+      // Get the current absolute transform
+      const transform = node.relativeTransform
+      const [[a, c, tx], [b, d, ty]] = transform
+
+      if (axis === 'x') {
+        // Flip horizontally: negate scaleX and skewY columns, adjust position
+        node.relativeTransform = [
+          [-a, c, tx + node.width * a],
+          [-b, d, ty + node.width * b]
+        ]
+      } else {
+        // Flip vertically: negate scaleY and skewX rows, adjust position
+        node.relativeTransform = [
+          [a, -c, tx + node.height * c],
+          [b, -d, ty + node.height * d]
+        ]
+      }
       return serializeNode(node)
     }
 
