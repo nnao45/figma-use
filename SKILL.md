@@ -502,7 +502,11 @@ figma-use set text-resize <id> height   # Wrap text (height auto, fixed width)
 figma-use set layout <id> --mode VERTICAL --gap 12 --padding 16
 figma-use set layout <id> --mode GRID --cols "1fr 1fr 1fr" --rows "auto" --gap 16
 figma-use node move <id> --x 100 --y 200
+figma-use node move <id> --dx 10 --dy -5   # Relative move
 figma-use node resize <id> --width 300 --height 200
+figma-use node scale <id> --factor 1.5     # Scale 150% from center
+figma-use node flip <id> --axis x          # Flip horizontally
+figma-use node flip <id> --axis y          # Flip vertically
 figma-use node delete <id> [id2...]
 figma-use node to-component <id>
 

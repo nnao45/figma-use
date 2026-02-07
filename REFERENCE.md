@@ -148,6 +148,10 @@ figma-use node rename <id> "New Name"
 figma-use node move <id> --x 100 --y 200
 figma-use node move <id> --dx 10 --dy -5   # Relative move
 figma-use node resize <id> --width 300 --height 200
+figma-use node scale <id> --factor 1.5     # Scale 150% from center
+figma-use node scale <id> --factor 0.5     # Scale down 50%
+figma-use node flip <id> --axis x          # Flip horizontally
+figma-use node flip <id> --axis y          # Flip vertically
 figma-use node set-parent <id> --parent <pid>
 figma-use node to-component <id>           # Convert frame to component
 figma-use node to-component "1:2 1:3 1:4"  # Multiple frames
