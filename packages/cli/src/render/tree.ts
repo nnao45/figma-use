@@ -139,6 +139,7 @@ export interface StyleProps {
   overflow?: 'hidden' | 'visible'
   shadow?: string
   blur?: number
+  backgroundBlur?: number
 
   // Advanced fills
   gradient?: GradientValue

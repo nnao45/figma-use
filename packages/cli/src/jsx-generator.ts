@@ -431,8 +431,8 @@ export function nodeToJsx(node: FigmaNode, ctx: JsxContext = {}): ts.JsxChild | 
       createJsxAttribute('opacity', ts.factory.createNumericLiteral(node.opacity.toFixed(2)))
     )
   }
-  // Blend mode
-  if (node.blendMode) {
+  // Blend mode (skip default values)
+  if (node.blendMode && node.blendMode !== 'PASS_THROUGH' && node.blendMode !== 'NORMAL') {
     attrs.push(
       createJsxAttribute('blendMode', strLit(node.blendMode.toLowerCase().replace(/_/g, '-')))
     )
@@ -445,11 +445,15 @@ export function nodeToJsx(node: FigmaNode, ctx: JsxContext = {}): ts.JsxChild | 
   if (node.clipsContent) {
     attrs.push(createJsxAttribute('overflow', strLit('hidden')))
   }
-  // Effects (shadows)
+  // Effects (shadows, blur)
   if (node.effects?.length) {
     for (const effect of node.effects) {
-      if (effect.type === 'DROP_SHADOW') {
+      // Skip invisible effects
+      if (effect.visible === false) continue
+
+      if (effect.type === 'DROP_SHADOW' || effect.type === 'INNER_SHADOW') {
         const shadow = [
+          effect.type === 'INNER_SHADOW' ? 'inset' : '',
           `${effect.offset?.x || 0}px`,
           `${effect.offset?.y || 0}px`,
           `${effect.radius || 0}px`,
@@ -461,6 +465,8 @@ export function nodeToJsx(node: FigmaNode, ctx: JsxContext = {}): ts.JsxChild | 
         attrs.push(createJsxAttribute('shadow', strLit(shadow)))
       } else if (effect.type === 'LAYER_BLUR') {
         attrs.push(createJsxAttribute('blur', numLit(effect.radius || 0)))
+      } else if (effect.type === 'BACKGROUND_BLUR') {
+        attrs.push(createJsxAttribute('backgroundBlur', numLit(effect.radius || 0)))
       }
     }
   }
