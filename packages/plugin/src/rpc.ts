@@ -3088,14 +3088,9 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
           return h(AutoLayout, { width: props.width || 100, height: props.height || 100 })
         }
 
-        const Component = TYPE_MAP[type]
-        if (!Component) throw new Error(`Unknown element: <${type}>`)
-
-        const isText = type === 'text'
-        const processed = processProps(props || {}, isText)
-
-        // Handle <arrow> - mark for VectorNetwork with caps
+        // Handle <arrow> - mark for VectorNetwork with caps (before TYPE_MAP check)
         if (type === 'arrow') {
+          const processed = processProps(props || {}, false)
           const startCapValue = normalizeLineCap(props.startCap as string | undefined) ?? 'NONE'
           const endCapValue = normalizeLineCap(props.endCap as string | undefined) ?? 'ARROW_LINES'
 
@@ -3115,6 +3110,12 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
           delete cleanProps.__endCap
           return h(Line, cleanProps)
         }
+
+        const Component = TYPE_MAP[type]
+        if (!Component) throw new Error(`Unknown element: <${type}>`)
+
+        const isText = type === 'text'
+        const processed = processProps(props || {}, isText)
 
         // Track wrap nodes
         if (processed.__wrap) {

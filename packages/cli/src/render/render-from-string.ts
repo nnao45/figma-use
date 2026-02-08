@@ -15,6 +15,10 @@ const MOCK_RENDER_MODULE = `
   export const Line = 'line'
   export const Image = 'image'
   export const SVG = 'svg'
+  export const Star = 'star'
+  export const Polygon = 'polygon'
+  export const Vector = 'vector'
+  export const Arrow = 'arrow'
   export const Icon = (props) => ({ __icon: true, name: props.name, size: props.size, color: props.color })
   export const View = 'frame'
   export const Rect = 'rectangle'
@@ -29,7 +33,7 @@ export async function buildComponent(input: string): Promise<Function> {
 
   // Pure JSX snippet (no import/export) - wrap it
   if (!code.includes('import ') && !code.includes('export ')) {
-    code = `import { Frame, Text, Rectangle, Ellipse, Line, Image, SVG, Icon } from 'figma-use/render'
+    code = `import { Frame, Text, Rectangle, Ellipse, Line, Image, SVG, Star, Polygon, Vector, Arrow, Icon } from 'figma-use/render'
 export default () => ${code}`
   }
   // Has imports but no export
