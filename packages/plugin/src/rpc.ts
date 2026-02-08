@@ -2894,6 +2894,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
         overflow: '__overflow',
         shadow: '__shadow',
         blur: '__blur',
+        backgroundBlur: '__backgroundBlur',
         blendMode: '__blendMode',
         startCap: '__startCap',
         endCap: '__endCap',
@@ -2941,6 +2942,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
         overflow?: string
         shadow?: string
         blur?: number
+        backgroundBlur?: number
         blendMode?: string
         startCap?: string
         endCap?: string
@@ -3145,6 +3147,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
           '__overflow',
           '__shadow',
           '__blur',
+          '__backgroundBlur',
           '__blendMode',
           '__startCap',
           '__endCap',
@@ -3264,11 +3267,14 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
           const mode = pp.blendMode.toUpperCase().replace(/-/g, '_')
           ;(target as BlendMixin).blendMode = mode as BlendMode
         }
-        // Effects (shadow, blur)
+        // Effects (shadow, blur, backgroundBlur)
         if ('effects' in target) {
           const effects: Effect[] = []
           if (pp.shadow) {
-            const parts = pp.shadow.match(
+            // Check for inset prefix (INNER_SHADOW)
+            const isInset = pp.shadow.trimStart().startsWith('inset')
+            const shadowStr = isInset ? pp.shadow.replace(/^\s*inset\s+/, '') : pp.shadow
+            const parts = shadowStr.match(
               /(-?\d+(?:\.\d+)?px)\s+(-?\d+(?:\.\d+)?px)\s+(-?\d+(?:\.\d+)?px)\s*(-?\d+(?:\.\d+)?px)?\s*(.+)?/
             )
             if (parts) {
@@ -3290,7 +3296,7 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
                 a = rgbaMatch[4] ? parseFloat(rgbaMatch[4]) : 1
               }
               effects.push({
-                type: 'DROP_SHADOW',
+                type: isInset ? 'INNER_SHADOW' : 'DROP_SHADOW',
                 visible: true,
                 blendMode: 'NORMAL',
                 radius: blur,
@@ -3306,6 +3312,13 @@ async function handleCommand(command: string, args?: unknown): Promise<unknown> 
               visible: true,
               radius: pp.blur
             })
+          }
+          if (pp.backgroundBlur !== undefined) {
+            effects.push({
+              type: 'BACKGROUND_BLUR',
+              visible: true,
+              radius: pp.backgroundBlur
+            } as Effect)
           }
           if (effects.length > 0) {
             ;(target as FrameNode).effects = effects

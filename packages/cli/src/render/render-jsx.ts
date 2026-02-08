@@ -10,7 +10,7 @@ import type { NodeRef } from '../types.ts'
 function buildComponent(jsx: string): React.FC {
   const code = `
     const h = React.createElement
-    const Frame = 'frame', Text = 'text', Rectangle = 'rectangle', Ellipse = 'ellipse', Line = 'line', Image = 'image', SVG = 'svg'
+    const Frame = 'frame', Text = 'text', Rectangle = 'rectangle', Ellipse = 'ellipse', Line = 'line', Image = 'image', SVG = 'svg', Star = 'star', Polygon = 'polygon', Vector = 'vector', Group = 'group', Section = 'section', Arrow = 'arrow'
     return function Component() { return ${jsx.trim()} }
   `
   const result = transformSync(code, {
